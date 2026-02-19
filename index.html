@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -11,9 +10,10 @@
     <title>My Warfarin</title>
     <link rel="icon" href="Warfarin.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-
+    
     <style>
         :root {
             --primary: #0d0e66;
@@ -26,709 +26,308 @@
             --danger: #dc3545;
             --font-size: 16px;
         }
-
         [data-theme="dark"] {
-            --bg: #121212;
-            --surface: #1e1e1e;
-            --text: #e0e0e0;
-            --text-muted: #a0a0a0;
-            --border: #333333;
+            --bg: #121212; --surface: #1e1e1e; --text: #e0e0e0;
+            --text-muted: #a0a0a0; --border: #333333;
         }
 
-        * {
-            box-sizing: border-box;
-            font-family: 'Segoe UI', system-ui, sans-serif;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            background: var(--bg);
-            color: var(--text);
-            font-size: var(--font-size);
-            transition: background 0.3s, color 0.3s;
-        }
-
+        * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-size: var(--font-size); transition: background 0.3s, color 0.3s; }
+        
         /* Navigation */
-        nav {
-            background: var(--primary);
-            color: white;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        nav { 
+            background: var(--primary); color: white; padding: 10px 20px; 
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+            position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
         }
-
-        .nav-brand {
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
-            font-size: 1.1em;
-            width: 220px;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 5px;
-            flex-wrap: wrap;
-            flex-grow: 1;
-            justify-content: center;
-            padding: 0 10px;
-        }
-
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            cursor: pointer;
-            padding: 8px 12px;
-            border-radius: 6px;
-            white-space: nowrap;
-            transition: background 0.2s;
-        }
-
-        .nav-links a:hover,
-        .nav-links a.active {
-            background: rgba(255, 255, 255, 0.2);
-            font-weight: bold;
-        }
-
-        .controls {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 15px;
-            flex-shrink: 0;
-            width: 220px;
-        }
-
-        .controls span {
-            cursor: pointer;
-        }
-
-        .logout-btn {
-            color: #ff6b6b;
-            font-weight: bold;
-            cursor: pointer;
-            text-decoration: none;
-            margin-left: 5px;
-            padding: 8px 0;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 20px auto;
-            padding: 0 15px;
-        }
-
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-
+        .nav-brand { font-weight: bold; display: flex; align-items: center; gap: 10px; flex-shrink: 0; font-size: 1.1em; width: 220px; }
+        .nav-links { display: flex; gap: 5px; flex-wrap: wrap; flex-grow: 1; justify-content: center; padding: 0 10px; }
+        .nav-links a { color: white; text-decoration: none; cursor: pointer; padding: 8px 12px; border-radius: 6px; white-space: nowrap; transition: background 0.2s; }
+        .nav-links a:hover, .nav-links a.active { background: rgba(255,255,255,0.2); font-weight: bold; }
+        .controls { display: flex; align-items: center; justify-content: flex-end; gap: 15px; flex-shrink: 0; width: 220px; }
+        .controls span { cursor: pointer; }
+        .logout-btn { color: #ff6b6b; font-weight: bold; cursor: pointer; text-decoration: none; margin-left: 5px; padding: 8px 0; }
+        
+        .container { max-width: 900px; margin: 20px auto; padding: 0 15px; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        
         /* Forms & Buttons */
-        input,
-        select,
-        button {
-            width: 100%;
-            padding: 14px;
-            margin: 8px 0;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: var(--surface);
-            color: var(--text);
-            font-size: 1rem;
-            appearance: none;
-        }
-
-        .input-group {
-            display: flex;
-            align-items: center;
-            margin: 8px 0;
-        }
-
-        .input-group input {
-            margin: 0;
-            border-radius: 8px 0 0 8px;
-            border-right: none;
-        }
-
-        .input-group span {
-            background: var(--border);
-            padding: 14px;
-            border-radius: 0 8px 8px 0;
-            border: 1px solid var(--border);
-            font-weight: bold;
-            color: var(--text-muted);
-        }
-
-        button.primary {
-            background: var(--primary);
-            color: white;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        button.primary:hover {
-            opacity: 0.9;
-        }
-
-        button.danger {
-            background: var(--danger);
-            color: white;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        button.danger:hover {
-            opacity: 0.9;
-        }
-
-        .status-low,
-        .status-high {
-            color: var(--danger);
-            font-weight: bold;
-        }
-
-        .status-ok {
-            color: var(--success);
-            font-weight: bold;
-        }
+        input, select, button { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 1rem; appearance: none; }
+        .input-group { display: flex; align-items: center; margin: 8px 0; }
+        .input-group input { margin: 0; border-radius: 8px 0 0 8px; border-right: none; }
+        .input-group span { background: var(--border); padding: 14px; border-radius: 0 8px 8px 0; border: 1px solid var(--border); font-weight: bold; color: var(--text-muted); }
+        
+        button.primary { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
+        button.primary:hover { opacity: 0.9; }
+        button.danger { background: var(--danger); color: white; border: none; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
+        button.danger:hover { opacity: 0.9; }
+        
+        .status-low, .status-high { color: var(--danger); font-weight: bold; }
+        .status-ok { color: var(--success); font-weight: bold; }
 
         /* Responsive Tables */
-        .table-responsive {
-            width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            margin-top: 10px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-        }
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; border-radius: 8px; border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; text-align: left; min-width: 400px; }
+        th { background: rgba(13, 14, 102, 0.05); }
+        th, td { padding: 12px 15px; border-bottom: 1px solid var(--border); }
+        tr:last-child td { border-bottom: none; }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            min-width: 400px;
-        }
+        #toast { visibility: hidden; min-width: 250px; background-color: var(--primary); color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 2000; left: 50%; transform: translateX(-50%); bottom: 30px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); font-weight: bold; }
+        #toast.show { visibility: visible; animation: fadein 0.3s, fadeout 0.3s 2.7s; }
+        @keyframes fadein { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
+        @keyframes fadeout { from { bottom: 30px; opacity: 1; } to { bottom: 0; opacity: 0; } }
 
-        th {
-            background: rgba(13, 14, 102, 0.05);
-        }
-
-        th,
-        td {
-            padding: 12px 15px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        #toast {
-            visibility: hidden;
-            min-width: 250px;
-            background-color: var(--primary);
-            color: #fff;
-            text-align: center;
-            border-radius: 8px;
-            padding: 16px;
-            position: fixed;
-            z-index: 2000;
-            left: 50%;
-            transform: translateX(-50%);
-            bottom: 30px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-            font-weight: bold;
-        }
-
-        #toast.show {
-            visibility: visible;
-            animation: fadein 0.3s, fadeout 0.3s 2.7s;
-        }
-
-        @keyframes fadein {
-            from {
-                bottom: 0;
-                opacity: 0;
-            }
-
-            to {
-                bottom: 30px;
-                opacity: 1;
-            }
-        }
-
-        @keyframes fadeout {
-            from {
-                bottom: 30px;
-                opacity: 1;
-            }
-
-            to {
-                bottom: 0;
-                opacity: 0;
-            }
-        }
-
-        .view {
-            display: none;
-        }
-
-        .view.active {
-            display: block;
-            animation: fadeInView 0.3s ease-in-out;
-        }
-
-        @keyframes fadeInView {
-            from {
-                opacity: 0;
-                transform: translateY(5px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+        .view { display: none; }
+        .view.active { display: block; animation: fadeInView 0.3s ease-in-out; }
+        @keyframes fadeInView { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Calendar Styles */
-        .cal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .cal-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 5px;
-            margin-bottom: 5px;
-        }
-
-        .cal-day-header {
-            text-align: center;
-            font-weight: bold;
-            padding: 8px 0;
-            background: var(--border);
-            border-radius: 6px;
-            font-size: 0.9em;
-        }
-
-        .cal-cell {
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            min-height: 85px;
-            padding: 5px;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            transition: background 0.2s;
-        }
-
-        .cal-cell:hover,
-        .cal-cell:active {
-            background: rgba(13, 14, 102, 0.08);
-        }
-
-        .cal-cell.today {
-            border: 2px solid var(--primary);
-            background: rgba(13, 14, 102, 0.03);
-        }
-
-        .cal-cell.other-month {
-            opacity: 0.3;
-            cursor: default;
-        }
-
-        .cal-cell.other-month:hover {
-            background: none;
-        }
-
-        .cal-date {
-            font-weight: bold;
-            font-size: 0.95em;
-            margin-bottom: 5px;
-            color: var(--text-muted);
-        }
-
-        .cal-dose {
-            background: var(--primary);
-            color: white;
-            border-radius: 4px;
-            padding: 4px 2px;
-            font-size: 0.85em;
-            text-align: center;
-            margin-top: auto;
-            font-weight: bold;
-        }
-
+        .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 5px; }
+        .cal-day-header { text-align: center; font-weight: bold; padding: 8px 0; background: var(--border); border-radius: 6px; font-size: 0.9em; }
+        .cal-cell { border: 1px solid var(--border); border-radius: 6px; min-height: 85px; padding: 5px; cursor: pointer; display: flex; flex-direction: column; transition: background 0.2s; }
+        .cal-cell:hover, .cal-cell:active { background: rgba(13, 14, 102, 0.08); }
+        .cal-cell.today { border: 2px solid var(--primary); background: rgba(13, 14, 102, 0.03); }
+        .cal-cell.other-month { opacity: 0.3; cursor: default; }
+        .cal-cell.other-month:hover { background: none; }
+        .cal-date { font-weight: bold; font-size: 0.95em; margin-bottom: 5px; color: var(--text-muted); }
+        .cal-dose { background: var(--primary); color: white; border-radius: 4px; padding: 4px 2px; font-size: 0.85em; text-align: center; margin-top: auto; font-weight: bold; }
+        
         /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 3000;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(2px);
-        }
-
-        .modal.active {
-            display: flex;
-            animation: fadeInModal 0.2s ease-out;
-        }
-
-        .modal-content {
-            background: var(--surface);
-            padding: 25px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 400px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-        }
-
-        @keyframes fadeInModal {
-            from {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 3000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal.active { display: flex; animation: fadeInModal 0.2s ease-out; }
+        .modal-content { background: var(--surface); padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        @keyframes fadeInModal { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 
         /* Chart Wrapper constraint to fix infinite scroll bug */
-        .chart-wrapper {
-            position: relative;
-            height: 250px;
-            width: 100%;
-        }
+        .chart-wrapper { position: relative; height: 250px; width: 100%; }
 
         /* MOBILE SPECIFIC OVERRIDES */
         @media (max-width: 850px) {
-            nav {
-                padding: 15px;
-                gap: 12px;
-            }
-
-            .nav-brand {
-                width: auto;
-            }
-
-            .controls {
-                width: auto;
-                flex-grow: 1;
-                gap: 12px;
-            }
-
-            .nav-links {
-                width: 100%;
-                justify-content: flex-start;
-                overflow-x: auto;
-                flex-wrap: nowrap;
-                padding-bottom: 5px;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: none;
-                order: 3;
-            }
-
-            .nav-links::-webkit-scrollbar {
-                display: none;
-            }
-
-            .cal-cell {
-                min-height: 70px;
-                padding: 4px;
-            }
-
-            .cal-date {
-                font-size: 0.85em;
-            }
-
-            .cal-dose {
-                font-size: 0.75em;
-                padding: 3px 1px;
-            }
-
-            .cal-day-header {
-                font-size: 0.8em;
-                padding: 5px 0;
-            }
-
-            .card button {
-                padding: 15px;
-                font-size: 1.05rem;
-            }
+            nav { padding: 15px; gap: 12px; }
+            .nav-brand { width: auto; }
+            .controls { width: auto; flex-grow: 1; gap: 12px; }
+            .nav-links { width: 100%; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 5px; -webkit-overflow-scrolling: touch; scrollbar-width: none; order: 3; }
+            .nav-links::-webkit-scrollbar { display: none; }
+            
+            .cal-cell { min-height: 70px; padding: 4px; }
+            .cal-date { font-size: 0.85em; }
+            .cal-dose { font-size: 0.75em; padding: 3px 1px; }
+            .cal-day-header { font-size: 0.8em; padding: 5px 0; }
+            .card button { padding: 15px; font-size: 1.05rem; }
         }
-
         @media (max-width: 400px) {
-            .nav-brand .brand-text {
-                display: none;
-            }
+            .nav-brand .brand-text { display: none; } 
         }
     </style>
 </head>
-
 <body>
 
-    <nav id="top-nav" style="display: none;">
-        <div class="nav-brand">
-            <img src="Warfarin.png" alt="My Warfarin Logo" style="width: 28px; height: 28px; border-radius: 4px;">
-            <span class="brand-text">My Warfarin</span>
-        </div>
+<nav id="top-nav" style="display: none;">
+    <div class="nav-brand">
+        <img src="Warfarin.png" alt="My Warfarin Logo" style="width: 28px; height: 28px; border-radius: 4px;"> 
+        <span class="brand-text">My Warfarin</span>
+    </div>
+    
+    <div class="nav-links">
+        <a onclick="showView('dashboard')" class="active">Dashboard</a>
+        <a onclick="showView('calendar')">Calendar</a>
+        <a onclick="showView('history')">INR History</a>
+        <a onclick="showView('reports')">Reports</a>
+        <a onclick="showView('settings')">Settings</a>
+    </div>
 
-        <div class="nav-links">
-            <a onclick="showView('dashboard')" class="active">Dashboard</a>
-            <a onclick="showView('calendar')">Calendar</a>
-            <a onclick="showView('history')">INR History</a>
-            <a onclick="showView('reports')">Reports</a>
-            <a onclick="showView('settings')">Settings</a>
-        </div>
-
-        <div class="controls">
-            <span onclick="adjustText(-1)">A-</span>
-            <span onclick="adjustText(1)">A+</span>
-            <span onclick="toggleTheme()" id="theme-icon">
+    <div class="controls">
+        <span onclick="adjustText(-1)">A-</span>
+        <span onclick="adjustText(1)">A+</span>
+        <span onclick="toggleTheme()" id="theme-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z"></path></svg>
         </span>
-            <a onclick="logout()" class="logout-btn">Logout</a>
+        <a onclick="logout()" class="logout-btn">Logout</a>
+    </div>
+</nav>
+
+<div class="container">
+    <div id="login-view" class="view active card" style="max-width: 400px; margin: 10vh auto; text-align: center;">
+        <h2 style="color: var(--primary); margin-bottom: 25px;">
+            <img src="Warfarin.png" alt="My Warfarin Logo" style="width: 56px; vertical-align: middle; margin-right: 10px; border-radius: 8px;"> 
+            <br><br>My Warfarin
+        </h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button class="primary" onclick="login()" style="margin-top: 15px;">Secure Login</button>
+    </div>
+
+    <div id="dashboard-view" class="view">
+        <h2>Dashboard <span id="view-mode-badge" style="color:var(--danger); font-size:14px; vertical-align: middle;"></span></h2>
+        <div class="card">
+            <div class="chart-wrapper"><canvas id="dashboardChart"></canvas></div>
         </div>
-    </nav>
-
-    <div class="container">
-        <div id="login-view" class="view active card" style="max-width: 400px; margin: 10vh auto; text-align: center;">
-            <h2 style="color: var(--primary); margin-bottom: 25px;">
-                <img src="Warfarin.png" alt="My Warfarin Logo" style="width: 56px; vertical-align: middle; margin-right: 10px; border-radius: 8px;">
-                <br><br>My Warfarin
-            </h2>
-            <input type="text" id="username" placeholder="Username">
-            <input type="password" id="password" placeholder="Password">
-            <button class="primary" onclick="login()" style="margin-top: 15px;">Secure Login</button>
-        </div>
-
-        <div id="dashboard-view" class="view">
-            <h2>Dashboard
-                <span id="view-mode-badge" style="color:var(--danger); font-size:14px; vertical-align: middle;"></span>
-            </h2>
-            <div class="card">
-                <div class="chart-wrapper"><canvas id="dashboardChart"></canvas></div>
-            </div>
-            <div class="card">
-                <h3 style="margin-top:0;">Last 12 Results</h3>
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Result</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dashboard-list"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="calendar-view" class="view">
-            <h2>Dosage Calendar</h2>
-            <div class="card" id="dose-input-area">
-                <div class="cal-header">
-                    <button class="primary" style="width:auto; padding:10px 15px; flex-shrink:0;" onclick="changeMonth(-1)">&laquo; Prev</button>
-                    <h3 id="cal-month-year" style="margin:0; text-align:center; flex-grow:1;">Month Year</h3>
-                    <button class="primary" style="width:auto; padding:10px 15px; flex-shrink:0;" onclick="changeMonth(1)">Next &raquo;</button>
-                </div>
-
-                <div class="cal-grid">
-                    <div class="cal-day-header">Sun</div>
-                    <div class="cal-day-header">Mon</div>
-                    <div class="cal-day-header">Tue</div>
-                    <div class="cal-day-header">Wed</div>
-                    <div class="cal-day-header">Thu</div>
-                    <div class="cal-day-header">Fri</div>
-                    <div class="cal-day-header">Sat</div>
-                </div>
-                <div class="cal-grid" id="cal-grid-days"></div>
-            </div>
-        </div>
-
-        <div id="history-view" class="view">
-            <h2>INR History</h2>
-            <div class="card" id="inr-input-area">
-                <h3 style="margin-top:0;">Add New Result</h3>
-                <label>Date of Blood Test</label><input type="date" id="inr-date">
-                <label>INR Result</label><input type="number" id="inr-result" step="0.1" placeholder="e.g. 2.8">
-                <button class="primary" onclick="saveINR()" style="margin-top:10px;">Save Result</button>
-            </div>
-            <div class="card">
-                <h3 style="margin-top:0;">History Log</h3>
-                <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
-                    <div style="flex:1; min-width: 120px;">
-                        <label style="font-size:0.9em; color:var(--text-muted);">Start</label><input type="date" id="hist-start" onchange="renderHistory()">
-                    </div>
-                    <div style="flex:1; min-width: 120px;">
-                        <label style="font-size:0.9em; color:var(--text-muted);">End</label><input type="date" id="hist-end" onchange="renderHistory()">
-                    </div>
-                </div>
-                <div class="chart-wrapper"><canvas id="historyChart"></canvas></div>
-                <div class="table-responsive" style="margin-top:20px;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Result</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="history-list"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="reports-view" class="view">
-            <h2>Export Reports</h2>
-            <div class="card">
-                <p style="color:var(--text-muted); margin-top:0;">Select a date range and choose your export format
-                    below. PDFs are automatically formatted for printing.</p>
-                <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <div style="flex:1; min-width:140px;"><label>Start Date</label><input type="date" id="rep-start">
-                    </div>
-                    <div style="flex:1; min-width:140px;"><label>End Date</label><input type="date" id="rep-end"></div>
-                </div>
-
-                <h4 style="margin-bottom: 5px;">INR Blood Test Results</h4>
-                <div style="display:flex; gap:10px; margin-bottom: 15px;">
-                    <button class="primary" style="flex:2;" onclick="generateReport('inr', 'pdf')">Download PDF</button>
-                    <button class="primary" style="flex:1; background:var(--text-muted);" onclick="generateReport('inr', 'csv')">CSV</button>
-                </div>
-
-                <h4 style="margin-bottom: 5px;">Daily Dosage Calendar</h4>
-                <div style="display:flex; gap:10px;">
-                    <button class="primary" style="flex:2;" onclick="generateReport('calendar', 'pdf')">Download PDF</button>
-                    <button class="primary" style="flex:1; background:var(--text-muted);" onclick="generateReport('calendar', 'csv')">CSV</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="settings-view" class="view">
-            <h2>Settings</h2>
-
-            <div class="card" id="admin-panel" style="display:none; border-left: 5px solid var(--danger);">
-                <h3 style="margin-top:0; color:var(--danger);">Admin Panel - Manage Users</h3>
-                <div style="display:flex; flex-direction:column; gap:5px;">
-                    <input type="text" id="adm-user" placeholder="New Username">
-                    <input type="password" id="adm-pass" placeholder="Password">
-                    <select id="adm-role"><option value="user">Full User</option><option value="viewer">Viewer (Read Only)</option><option value="admin">Admin</option></select>
-                    <button class="primary" onclick="saveAdminUser()" style="margin-top:10px;">Add / Update User</button>
-                </div>
-                <div class="table-responsive" style="margin-top:15px;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Role</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="admin-user-list"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="card">
-                <h3 style="margin-top:0;">Profile Details</h3>
-                <label>Patient Full Name</label><input type="text" id="prof-name" placeholder="John Doe">
-                <label>Date of Birth</label><input type="date" id="prof-dob">
-
-                <h3 style="margin-top:25px;">Target INR Range</h3>
-                <div style="display:flex; gap: 10px;">
-                    <div style="flex:1;"><label>Minimum</label><input type="number" id="target-min" placeholder="2.5" step="0.1">
-                    </div>
-                    <div style="flex:1;"><label>Maximum</label><input type="number" id="target-max" placeholder="3.5" step="0.1">
-                    </div>
-                </div>
-                <button class="primary" id="btn-save-settings" onclick="saveSettings()" style="margin-top:15px;">Save Changes</button>
-            </div>
-
-            <div class="card">
-                <h3 style="margin-top:0;">Share Medical Data</h3>
-                <p>Give this code to a doctor or family member so they can view your data.</p>
-                <div
-                    style="background:var(--bg); border:1px solid var(--border); padding:15px; border-radius:8px; text-align:center; margin-bottom:20px;">
-                    <strong id="my-share-code" style="color:var(--primary); font-size:1.5rem; letter-spacing:2px;">-</strong>
-                </div>
-
-                <hr style="border:0; border-top:1px solid var(--border); margin:20px 0;">
-
-                <h3 style="margin-top:0;">View Someone Else</h3>
-                <label>Enter another user's 10-character code to view their records</label>
-                <input type="text" id="saved-share-code" placeholder="e.g. a1b2c3d4e5">
-                <button class="primary" id="btn-save-share" onclick="saveSettings()">Save Code & View Data</button>
-            </div>
-
-            <div class="card" id="backup-panel">
-                <h3 style="margin-top:0;">Offline Backup & Restore</h3>
-                <p style="color:var(--text-muted); font-size:0.9em;">Download a secure copy of your database to keep on
-                    your device.</p>
-                <button class="primary" onclick="backupData()">Download JSON Backup</button>
-
-                <hr style="border:0; border-top:1px solid var(--border); margin:20px 0;">
-
-                <label>Restore from a previous backup file</label>
-                <input type="file" id="json-upload" accept=".json" style="padding:10px;">
-                <button class="danger" onclick="restoreData()">Restore Data from File</button>
+        <div class="card">
+            <h3 style="margin-top:0;">Last 12 Results</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>Date</th><th>Result</th><th>Status</th></tr></thead>
+                    <tbody id="dashboard-list"></tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <div id="dose-modal" class="modal">
-        <div class="modal-content">
-            <h3 style="margin-top:0; color:var(--primary);">Daily Dosage</h3>
-            <label>Selected Date</label>
-            <input type="date" id="modal-dose-date" readonly style="background:var(--bg); color:var(--text-muted); cursor:not-allowed; border:none; box-shadow:none;">
-
-            <label>Amount Prescribed</label>
-            <div class="input-group">
-                <input type="number" id="modal-dose-amount" placeholder="e.g. 7.5" step="0.5">
-                <span>mg</span>
+    <div id="calendar-view" class="view">
+        <h2>Dosage Calendar</h2>
+        <div class="card" id="dose-input-area">
+            <div class="cal-header">
+                <button class="primary" style="width:auto; padding:10px 15px; flex-shrink:0;" onclick="changeMonth(-1)">&laquo; Prev</button>
+                <h3 id="cal-month-year" style="margin:0; text-align:center; flex-grow:1;">Month Year</h3>
+                <button class="primary" style="width:auto; padding:10px 15px; flex-shrink:0;" onclick="changeMonth(1)">Next &raquo;</button>
             </div>
+            
+            <div class="cal-grid">
+                <div class="cal-day-header">Sun</div>
+                <div class="cal-day-header">Mon</div>
+                <div class="cal-day-header">Tue</div>
+                <div class="cal-day-header">Wed</div>
+                <div class="cal-day-header">Thu</div>
+                <div class="cal-day-header">Fri</div>
+                <div class="cal-day-header">Sat</div>
+            </div>
+            <div class="cal-grid" id="cal-grid-days"></div>
+        </div>
+    </div>
 
-            <div style="display:flex; flex-direction:column; gap:10px; margin-top:20px;">
-                <button class="primary" onclick="saveModalDose()">Save Dosage</button>
-                <button class="danger" id="btn-delete-dose" onclick="deleteModalDose()" style="display:none;">Delete Entry</button>
-                <button class="primary" style="background:transparent; color:var(--text-muted); border:1px solid var(--border);" onclick="closeDoseModal()">Cancel</button>
+    <div id="history-view" class="view">
+        <h2>INR History</h2>
+        <div class="card" id="inr-input-area">
+            <h3 style="margin-top:0;">Add New Result</h3>
+            <label>Date of Blood Test</label><input type="date" id="inr-date">
+            <label>INR Result</label><input type="number" id="inr-result" step="0.1" placeholder="e.g. 2.8">
+            <button class="primary" onclick="saveINR()" style="margin-top:10px;">Save Result</button>
+        </div>
+        <div class="card">
+            <h3 style="margin-top:0;">History Log</h3>
+            <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+                <div style="flex:1; min-width: 120px;"><label style="font-size:0.9em; color:var(--text-muted);">Start</label><input type="date" id="hist-start" onchange="renderHistory()"></div>
+                <div style="flex:1; min-width: 120px;"><label style="font-size:0.9em; color:var(--text-muted);">End</label><input type="date" id="hist-end" onchange="renderHistory()"></div>
+            </div>
+            <div class="chart-wrapper"><canvas id="historyChart"></canvas></div>
+            <div class="table-responsive" style="margin-top:20px;">
+                <table>
+                    <thead><tr><th>Date</th><th>Result</th><th>Status</th></tr></thead>
+                    <tbody id="history-list"></tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <div id="toast">Message</div>
+    <div id="reports-view" class="view">
+        <h2>Export Reports</h2>
+        <div class="card">
+            <p style="color:var(--text-muted); margin-top:0;">Select a date range and choose your export format below. PDFs are automatically formatted for printing.</p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <div style="flex:1; min-width:140px;"><label>Start Date</label><input type="date" id="rep-start"></div>
+                <div style="flex:1; min-width:140px;"><label>End Date</label><input type="date" id="rep-end"></div>
+            </div>
+            
+            <h4 style="margin-bottom: 5px;">INR Blood Test Results</h4>
+            <div style="display:flex; gap:10px; margin-bottom: 15px;">
+                <button class="primary" style="flex:2;" onclick="generateReport('inr', 'pdf')">Download PDF</button>
+                <button class="primary" style="flex:1; background:var(--text-muted);" onclick="generateReport('inr', 'csv')">CSV</button>
+            </div>
+            
+            <h4 style="margin-bottom: 5px;">Daily Dosage Calendar</h4>
+            <div style="display:flex; gap:10px;">
+                <button class="primary" style="flex:2;" onclick="generateReport('calendar', 'pdf')">Download PDF</button>
+                <button class="primary" style="flex:1; background:var(--text-muted);" onclick="generateReport('calendar', 'csv')">CSV</button>
+            </div>
+        </div>
+    </div>
 
-    <script>
-        let appData = { settings: { target_min: 2.5, target_max: 3.5 }, inr: [], dosages: [], view_only: false };
+    <div id="settings-view" class="view">
+        <h2>Settings</h2>
+        
+        <div class="card" id="admin-panel" style="display:none; border-left: 5px solid var(--danger);">
+            <h3 style="margin-top:0; color:var(--danger);">Admin Panel - Manage Users</h3>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <input type="text" id="adm-user" placeholder="New Username">
+                <input type="password" id="adm-pass" placeholder="Password">
+                <select id="adm-role"><option value="user">Full User</option><option value="viewer">Viewer (Read Only)</option><option value="admin">Admin</option></select>
+                <button class="primary" onclick="saveAdminUser()" style="margin-top:10px;">Add / Update User</button>
+            </div>
+            <div class="table-responsive" style="margin-top:15px;">
+                <table>
+                    <thead><tr><th>User</th><th>Role</th><th>Action</th></tr></thead>
+                    <tbody id="admin-user-list"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top:0;">Profile Details</h3>
+            <label>Patient Full Name</label><input type="text" id="prof-name" placeholder="John Doe">
+            <label>Date of Birth</label><input type="date" id="prof-dob">
+            
+            <h3 style="margin-top:25px;">Target INR Range</h3>
+            <div style="display:flex; gap: 10px;">
+                <div style="flex:1;"><label>Minimum</label><input type="number" id="target-min" placeholder="2.5" step="0.1"></div>
+                <div style="flex:1;"><label>Maximum</label><input type="number" id="target-max" placeholder="3.5" step="0.1"></div>
+            </div>
+            <button class="primary" id="btn-save-settings" onclick="saveSettings()" style="margin-top:15px;">Save Changes</button>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top:0;">Share Medical Data</h3>
+            <p>Give this code to a doctor or family member so they can view your data.</p>
+            <div style="background:var(--bg); border:1px solid var(--border); padding:15px; border-radius:8px; text-align:center; margin-bottom:20px;">
+                <strong id="my-share-code" style="color:var(--primary); font-size:1.5rem; letter-spacing:2px;">-</strong>
+            </div>
+            
+            <hr style="border:0; border-top:1px solid var(--border); margin:20px 0;">
+            
+            <h3 style="margin-top:0;">View Someone Else</h3>
+            <label>Enter another user's 10-character code to view their records</label>
+            <input type="text" id="saved-share-code" placeholder="e.g. a1b2c3d4e5">
+            <button class="primary" id="btn-save-share" onclick="saveSettings()">Save Code & View Data</button>
+        </div>
+        
+        <div class="card" id="backup-panel">
+            <h3 style="margin-top:0;">Offline Backup & Restore</h3>
+            <p style="color:var(--text-muted); font-size:0.9em;">Download a secure copy of your database to keep on your device.</p>
+            <button class="primary" onclick="backupData()">Download JSON Backup</button>
+            
+            <hr style="border:0; border-top:1px solid var(--border); margin:20px 0;">
+            
+            <label>Restore from a previous backup file</label>
+            <input type="file" id="json-upload" accept=".json" style="padding:10px;">
+            <button class="danger" onclick="restoreData()">Restore Data from File</button>
+        </div>
+    </div>
+</div>
+
+<div id="dose-modal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0; color:var(--primary);">Daily Dosage</h3>
+        <label>Selected Date</label>
+        <input type="date" id="modal-dose-date" readonly style="background:var(--bg); color:var(--text-muted); cursor:not-allowed; border:none; box-shadow:none;">
+        
+        <label>Amount Prescribed</label>
+        <div class="input-group">
+            <input type="number" id="modal-dose-amount" placeholder="e.g. 7.5" step="0.5">
+            <span>mg</span>
+        </div>
+        
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:20px;">
+            <button class="primary" onclick="saveModalDose()">Save Dosage</button>
+            <button class="danger" id="btn-delete-dose" onclick="deleteModalDose()" style="display:none;">Delete Entry</button>
+            <button class="primary" style="background:transparent; color:var(--text-muted); border:1px solid var(--border);" onclick="closeDoseModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast">Message</div>
+
+<script>
+    let appData = { settings: { target_min: 2.5, target_max: 3.5 }, inr: [], dosages: [], view_only: false };
     let charts = {};
     let currentUserRole = 'user';
     let currentCalDate = new Date(); 
@@ -933,13 +532,53 @@
     function drawChart(canvasId, labels, data) {
         const ctx = document.getElementById(canvasId).getContext('2d');
         if(charts[canvasId]) charts[canvasId].destroy();
+        
+        // Calculate point colors: Red if out of bounds, Blue if inside target
+        let pointColors = data.map(val => {
+            if (val < appData.settings.target_min || val > appData.settings.target_max) return '#dc3545';
+            return '#0d0e66';
+        });
+
         charts[canvasId] = new Chart(ctx, {
             type: 'line',
-            data: { labels: labels, datasets: [{ label: 'INR Result', data: data, borderColor: '#0d0e66', backgroundColor: 'rgba(13, 14, 102, 0.1)', fill: true, tension: 0.1 }] },
+            data: { 
+                labels: labels, 
+                datasets: [{ 
+                    label: 'INR Result', 
+                    data: data, 
+                    borderColor: '#0d0e66', 
+                    backgroundColor: 'rgba(13, 14, 102, 0.1)', 
+                    fill: true, 
+                    tension: 0.1,
+                    pointBackgroundColor: pointColors,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }] 
+            },
             options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { annotation: { annotations: { box1: { type: 'box', yMin: appData.settings.target_min, yMax: appData.settings.target_max, backgroundColor: 'rgba(40, 167, 69, 0.1)', borderWidth: 0 } } } },
-                scales: { y: { suggestedMin: 1.0, suggestedMax: 5.0 } }
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: { 
+                    annotation: { 
+                        annotations: { 
+                            targetRange: { 
+                                type: 'box', 
+                                yMin: appData.settings.target_min, 
+                                yMax: appData.settings.target_max, 
+                                backgroundColor: 'rgba(40, 167, 69, 0.15)',
+                                borderColor: 'rgba(40, 167, 69, 0.4)',
+                                borderWidth: 1,
+                                drawTime: 'beforeDatasetsDraw'
+                            } 
+                        } 
+                    } 
+                },
+                scales: { 
+                    y: { 
+                        suggestedMin: Math.min(1.0, appData.settings.target_min - 0.5), 
+                        suggestedMax: Math.max(5.0, appData.settings.target_max + 0.5) 
+                    } 
+                }
             }
         });
     }
@@ -1063,7 +702,6 @@
     }
 
     document.getElementById('inr-date').valueAsDate = new Date();
-    </script>
+</script>
 </body>
-
 </html>
