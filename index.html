@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>My Warfarin</title>
+    <link rel="icon" href="Warfarin.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #0d0e66;
+            --bg: #f4f6f9;
+            --surface: #ffffff;
+            --text: #333333;
+            --text-muted: #666666;
+            --border: #e0e0e0;
+            --success: #28a745;
+            --danger: #dc3545;
+            --font-size: 16px;
+        }
+
+        [data-theme="dark"] {
+            --bg: #121212;
+            --surface: #1e1e1e;
+            --text: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --border: #333333;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-size: var(--font-size);
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* Navigation */
+        nav {
+            background: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-brand {
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            font-size: 1.1em;
+            width: 220px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            flex-grow: 1;
+            justify-content: center;
+            padding: 0 10px;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 6px;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            background: rgba(255, 255, 255, 0.2);
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 15px;
+            flex-shrink: 0;
+            width: 220px;
+        }
+
+        .controls span {
+            cursor: pointer;
+        }
+
+        .logout-btn {
+            color: #ff6b6b;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            margin-left: 5px;
+            padding: 8px 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Forms & Buttons */
+        input,
+        select,
+        button {
+            width: 100%;
+            padding: 14px;
+            margin: 8px 0;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--text);
+            font-size: 1rem;
+            appearance: none;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+        }
+
+        .input-group input {
+            margin: 0;
+            border-radius: 8px 0 0 8px;
+            border-right: none;
+        }
+
+        .input-group span {
+            background: var(--border);
+            padding: 14px;
+            border-radius: 0 8px 8px 0;
+            border: 1px solid var(--border);
+            font-weight: bold;
+            color: var(--text-muted);
+        }
+
+        button.primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button.primary:hover {
+            opacity: 0.9;
+        }
+
+        button.danger {
+            background: var(--danger);
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button.danger:hover {
+            opacity: 0.9;
+        }
+
+        .status-low,
+        .status-high {
+            color: var(--danger);
+            font-weight: bold;
+        }
+
+        .status-ok {
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        /* Responsive Tables */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 400px;
+        }
+
+        th {
+            background: rgba(13, 14, 102, 0.05);
+        }
+
+        th,
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: var(--primary);
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 2000;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 30px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            font-weight: bold;
+        }
+
+        #toast.show {
+            visibility: visible;
+            animation: fadein 0.3s, fadeout 0.3s 2.7s;
+        }
+
+        @keyframes fadein {
+            from {
+                bottom: 0;
+                opacity: 0;
+            }
+
+            to {
+                bottom: 30px;
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeout {
+            from {
+                bottom: 30px;
+                opacity: 1;
+            }
+
+            to {
+                bottom: 0;
+                opacity: 0;
+            }
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+            animation: fadeInView 0.3s ease-in-out;
+        }
+
+        @keyframes fadeInView {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Calendar Styles */
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+
+        .cal-day-header {
+            text-align: center;
+            font-weight: bold;
+            padding: 8px 0;
+            background: var(--border);
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+
+        .cal-cell {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            min-height: 85px;
+            padding: 5px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            transition: background 0.2s;
+        }
+
+        .cal-cell:hover,
+        .cal-cell:active {
+            background: rgba(13, 14, 102, 0.08);
+        }
+
+        .cal-cell.today {
+            border: 2px solid var(--primary);
+            background: rgba(13, 14, 102, 0.03);
+        }
+
+        .cal-cell.other-month {
+            opacity: 0.3;
+            cursor: default;
+        }
+
+        .cal-cell.other-month:hover {
+            background: none;
+        }
+
+        .cal-date {
+            font-weight: bold;
+            font-size: 0.95em;
+            margin-bottom: 5px;
+            color: var(--text-muted);
+        }
+
+        .cal-dose {
+            background: var(--primary);
+            color: white;
+            border-radius: 4px;
+            padding: 4px 2px;
+            font-size: 0.85em;
+            text-align: center;
+            margin-top: auto;
+            font-weight: bold;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal.active {
+            display: flex;
+            animation: fadeInModal 0.2s ease-out;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            padding: 25px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes fadeInModal {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Chart Wrapper constraint to fix infinite scroll bug */
+        .chart-wrapper {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        /* MOBILE SPECIFIC OVERRIDES */
+        @media (max-width: 850px) {
+            nav {
+                padding: 15px;
+                gap: 12px;
+            }
+
+            .nav-brand {
+                width: auto;
+            }
+
+            .controls {
+                width: auto;
+                flex-grow: 1;
+                gap: 12px;
+            }
+
+            .nav-links {
+                width: 100%;
+                justify-content: flex-start;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 5px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                order: 3;
+            }
+
+            .nav-links::-webkit-scrollbar {
+                display: none;
+            }
+
+            .cal-cell {
+                min-height: 70px;
+                padding: 4px;
+            }
+
+            .cal-date {
+                font-size: 0.85em;
+            }
+
+            .cal-dose {
+                font-size: 0.75em;
+                padding: 3px 1px;
+            }
+
+            .cal-day-header {
+                font-size: 0.8em;
+                padding: 5px 0;
+            }
+
+            .card button {
+                padding: 15px;
+                font-size: 1.05rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .nav-brand .brand-text {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav id="top-nav" style="display: none;">
+        <div class="nav-brand">
+            <img src="Warfarin.png" alt="My Warfarin Logo" style="width: 28px; height: 28px; border-radius: 4px;">
+            <span class="brand-text">My Warfarin</span>
+        </div>
+
+        <div class="nav-links">
+            <a onclick="showView('dashboard')" class="active">Dashboard</a>
+            <a onclick="showView('calendar')">Calendar</a>
+            <a onclick="showView('history')">INR History</a>
+            <a onclick="showView('reports')">Reports</a>
+            <a onclick="showView('settings')">Settings</a>
+        </div>
+
+        <div class="controls">
+            <span onclick="adjustText(-1)">A-</span>
+            <span onclick="adjustText(1)">A+</span>
+            <span onclick="toggleTheme()" id="theme-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z"></path></svg>
+        </span>
+            <a onclick="logout()" class="logout-btn">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="login-view" class="view active card" style="max-width: 400px; margin: 10vh auto; text-align: center;">
+            <h2 style="color: var(--primary); margin-bottom: 25px;">
+                <img src="Warfarin.png" alt="My Warfarin Logo" style="width: 56px; vertical-align: middle; margin-right: 10px; border-radius: 8px;">
+                <br><br>My Warfarin
+            </h2>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button class="primary" onclick="login()" style="margin-top: 15px;">Secure Login</button>
+        </div>
+
+        <div id="dashboard-view" class="view">
+            <h2>Dashboard
+                <span id="view-mode-badge" style="color:var(--danger); font-size:14px; vertical-align: middle;"></span>
+            </h2>
+            <div class="card">
+                <div class="chart-wrapper"><canvas id="dashboardChart"></canvas></div>
+            </div>
+            <div class="card">
+                <h3 style="margin-top:0;">Last 12 Results</h3>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Result</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-list"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="calendar-view" class="view">
+            <h2>Dosage Calendar</h2>
+            <div class="card" id="dose-input-area">
+                <div class="cal-header">
+                    <button class="primary" style="width:auto; padding:10px 15px; flex-shrink:0;" onclick="changeMonth(-1)">&laquo; Prev</button>
+                    <h3 id="cal-month-year" style="margin:0; text-align:center; flex-grow:1;">Month Year</h3>
+                    <button class="primary" style="width:auto; padding:10px 15px; flex-shrink:0;" onclick="changeMonth(1)">Next &raquo;</button>
+                </div>
+
+                <div class="cal-grid">
+                    <div class="cal-day-header">Sun</div>
+                    <div class="cal-day-header">Mon</div>
+                    <div class="cal-day-header">Tue</div>
+                    <div class="cal-day-header">Wed</div>
+                    <div class="cal-day-header">Thu</div>
+                    <div class="cal-day-header">Fri</div>
+                    <div class="cal-day-header">Sat</div>
+                </div>
+                <div class="cal-grid" id="cal-grid-days"></div>
+            </div>
+        </div>
+
+        <div id="history-view" class="view">
+            <h2>INR History</h2>
+            <div class="card" id="inr-input-area">
+                <h3 style="margin-top:0;">Add New Result</h3>
+                <label>Date of Blood Test</label><input type="date" id="inr-date">
+                <label>INR Result</label><input type="number" id="inr-result" step="0.1" placeholder="e.g. 2.8">
+                <button class="primary" onclick="saveINR()" style="margin-top:10px;">Save Result</button>
+            </div>
+            <div class="card">
+                <h3 style="margin-top:0;">History Log</h3>
+                <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width: 120px;">
+                        <label style="font-size:0.9em; color:var(--text-muted);">Start</label><input type="date" id="hist-start" onchange="renderHistory()">
+                    </div>
+                    <div style="flex:1; min-width: 120px;">
+                        <label style="font-size:0.9em; color:var(--text-muted);">End</label><input type="date" id="hist-end" onchange="renderHistory()">
+                    </div>
+                </div>
+                <div class="chart-wrapper"><canvas id="historyChart"></canvas></div>
+                <div class="table-responsive" style="margin-top:20px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Result</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-list"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="reports-view" class="view">
+            <h2>Export Reports</h2>
+            <div class="card">
+                <p style="color:var(--text-muted); margin-top:0;">Select a date range and choose your export format
+                    below. PDFs are automatically formatted for printing.</p>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:140px;"><label>Start Date</label><input type="date" id="rep-start">
+                    </div>
+                    <div style="flex:1; min-width:140px;"><label>End Date</label><input type="date" id="rep-end"></div>
+                </div>
+
+                <h4 style="margin-bottom: 5px;">INR Blood Test Results</h4>
+                <div style="display:flex; gap:10px; margin-bottom: 15px;">
+                    <button class="primary" style="flex:2;" onclick="generateReport('inr', 'pdf')">Download PDF</button>
+                    <button class="primary" style="flex:1; background:var(--text-muted);" onclick="generateReport('inr', 'csv')">CSV</button>
+                </div>
+
+                <h4 style="margin-bottom: 5px;">Daily Dosage Calendar</h4>
+                <div style="display:flex; gap:10px;">
+                    <button class="primary" style="flex:2;" onclick="generateReport('calendar', 'pdf')">Download PDF</button>
+                    <button class="primary" style="flex:1; background:var(--text-muted);" onclick="generateReport('calendar', 'csv')">CSV</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-view" class="view">
+            <h2>Settings</h2>
+
+            <div class="card" id="admin-panel" style="display:none; border-left: 5px solid var(--danger);">
+                <h3 style="margin-top:0; color:var(--danger);">Admin Panel - Manage Users</h3>
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                    <input type="text" id="adm-user" placeholder="New Username">
+                    <input type="password" id="adm-pass" placeholder="Password">
+                    <select id="adm-role"><option value="user">Full User</option><option value="viewer">Viewer (Read Only)</option><option value="admin">Admin</option></select>
+                    <button class="primary" onclick="saveAdminUser()" style="margin-top:10px;">Add / Update User</button>
+                </div>
+                <div class="table-responsive" style="margin-top:15px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-user-list"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top:0;">Profile Details</h3>
+                <label>Patient Full Name</label><input type="text" id="prof-name" placeholder="John Doe">
+                <label>Date of Birth</label><input type="date" id="prof-dob">
+
+                <h3 style="margin-top:25px;">Target INR Range</h3>
+                <div style="display:flex; gap: 10px;">
+                    <div style="flex:1;"><label>Minimum</label><input type="number" id="target-min" placeholder="2.5" step="0.1">
+                    </div>
+                    <div style="flex:1;"><label>Maximum</label><input type="number" id="target-max" placeholder="3.5" step="0.1">
+                    </div>
+                </div>
+                <button class="primary" id="btn-save-settings" onclick="saveSettings()" style="margin-top:15px;">Save Changes</button>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top:0;">Share Medical Data</h3>
+                <p>Give this code to a doctor or family member so they can view your data.</p>
+                <div
+                    style="background:var(--bg); border:1px solid var(--border); padding:15px; border-radius:8px; text-align:center; margin-bottom:20px;">
+                    <strong id="my-share-code" style="color:var(--primary); font-size:1.5rem; letter-spacing:2px;">-</strong>
+                </div>
+
+                <hr style="border:0; border-top:1px solid var(--border); margin:20px 0;">
+
+                <h3 style="margin-top:0;">View Someone Else</h3>
+                <label>Enter another user's 10-character code to view their records</label>
+                <input type="text" id="saved-share-code" placeholder="e.g. a1b2c3d4e5">
+                <button class="primary" id="btn-save-share" onclick="saveSettings()">Save Code & View Data</button>
+            </div>
+
+            <div class="card" id="backup-panel">
+                <h3 style="margin-top:0;">Offline Backup & Restore</h3>
+                <p style="color:var(--text-muted); font-size:0.9em;">Download a secure copy of your database to keep on
+                    your device.</p>
+                <button class="primary" onclick="backupData()">Download JSON Backup</button>
+
+                <hr style="border:0; border-top:1px solid var(--border); margin:20px 0;">
+
+                <label>Restore from a previous backup file</label>
+                <input type="file" id="json-upload" accept=".json" style="padding:10px;">
+                <button class="danger" onclick="restoreData()">Restore Data from File</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dose-modal" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-top:0; color:var(--primary);">Daily Dosage</h3>
+            <label>Selected Date</label>
+            <input type="date" id="modal-dose-date" readonly style="background:var(--bg); color:var(--text-muted); cursor:not-allowed; border:none; box-shadow:none;">
+
+            <label>Amount Prescribed</label>
+            <div class="input-group">
+                <input type="number" id="modal-dose-amount" placeholder="e.g. 7.5" step="0.5">
+                <span>mg</span>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:20px;">
+                <button class="primary" onclick="saveModalDose()">Save Dosage</button>
+                <button class="danger" id="btn-delete-dose" onclick="deleteModalDose()" style="display:none;">Delete Entry</button>
+                <button class="primary" style="background:transparent; color:var(--text-muted); border:1px solid var(--border);" onclick="closeDoseModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast">Message</div>
+
+    <script>
+        let appData = { settings: { target_min: 2.5, target_max: 3.5 }, inr: [], dosages: [], view_only: false };
+    let charts = {};
+    let currentUserRole = 'user';
+    let currentCalDate = new Date(); 
+
+    function showToast(msg) {
+        const t = document.getElementById("toast");
+        t.innerText = msg; t.className = "show";
+        setTimeout(() => t.className = t.className.replace("show", ""), 3000);
+    }
+
+    function adjustText(change) {
+        let root = document.documentElement;
+        let size = parseFloat(getComputedStyle(root).getPropertyValue('--font-size'));
+        root.style.setProperty('--font-size', (size + change) + 'px');
+    }
+
+    function toggleTheme() {
+        const root = document.documentElement;
+        const icon = document.getElementById('theme-icon');
+        if (root.getAttribute('data-theme') === 'dark') {
+            root.removeAttribute('data-theme');
+            icon.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z"></path></svg>`;
+        } else {
+            root.setAttribute('data-theme', 'dark');
+            icon.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.758a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z"></path></svg>`;
+        }
+    }
+
+    function showView(viewId) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(viewId + '-view').classList.add('active');
+        document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+        event.target.classList.add('active');
+        window.scrollTo(0, 0); 
+        
+        if(viewId === 'dashboard') renderDashboard();
+        if(viewId === 'history') renderHistory();
+        if(viewId === 'calendar') renderCalendar(); 
+    }
+
+    async function apiCall(action, payload = null) {
+        const opts = { method: payload ? 'POST' : 'GET' };
+        if(payload) { opts.headers = {'Content-Type': 'application/json'}; opts.body = JSON.stringify(payload); }
+        try { return await (await fetch(`api.php?action=${action}`, opts)).json(); } 
+        catch (e) { showToast("Connection error. Check internet."); return {success: false}; }
+    }
+
+    async function login() {
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        const res = await apiCall('login', {username: u, password: p});
+        
+        if (res.success) {
+            currentUserRole = res.role;
+            document.getElementById('top-nav').style.display = 'flex';
+            document.getElementById('login-view').classList.remove('active');
+            document.getElementById('dashboard-view').classList.add('active');
+            
+            if(currentUserRole === 'admin') {
+                document.getElementById('admin-panel').style.display = 'block';
+                loadAdminUsers();
+            }
+            await loadData();
+        } else { showToast(res.error || "Login failed"); }
+    }
+
+    async function logout() { await apiCall('logout'); location.reload(); }
+
+    function getStatusText(val) {
+        if(val < appData.settings.target_min) return 'Low';
+        if(val > appData.settings.target_max) return 'High';
+        return 'Within Range';
+    }
+    function getStatusHTML(val) {
+        let txt = getStatusText(val);
+        if(txt === 'Low' || txt === 'High') return `<span class="status-danger" style="color:var(--danger); font-weight:bold;">${txt}</span>`;
+        return `<span class="status-ok" style="color:var(--success); font-weight:bold;">${txt}</span>`;
+    }
+
+    async function loadData() {
+        const res = await apiCall('get_data');
+        if(!res.success) return;
+        appData = res;
+        appData.settings.target_min = appData.settings.target_min || 2.5;
+        appData.settings.target_max = appData.settings.target_max || 3.5;
+        
+        const disableInputs = appData.view_only;
+        document.getElementById('view-mode-badge').innerText = disableInputs ? "(VIEW ONLY MODE)" : "";
+        document.getElementById('inr-input-area').style.display = disableInputs ? 'none' : 'block';
+        document.getElementById('backup-panel').style.display = disableInputs ? 'none' : 'block';
+        document.getElementById('btn-save-settings').style.display = disableInputs ? 'none' : 'block';
+
+        document.getElementById('prof-name').value = appData.settings.name || '';
+        document.getElementById('prof-dob').value = appData.settings.dob || '';
+        document.getElementById('target-min').value = appData.settings.target_min;
+        document.getElementById('target-max').value = appData.settings.target_max;
+        document.getElementById('my-share-code').innerText = appData.settings.share_code || '-';
+        document.getElementById('saved-share-code').value = appData.settings.saved_share_code || '';
+
+        renderDashboard();
+        renderCalendar();
+    }
+
+    function renderCalendar() {
+        const year = currentCalDate.getFullYear();
+        const month = currentCalDate.getMonth();
+        
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        document.getElementById('cal-month-year').innerText = `${monthNames[month]} ${year}`;
+        
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const grid = document.getElementById('cal-grid-days');
+        
+        grid.innerHTML = '';
+        for(let i = 0; i < firstDay; i++) { grid.innerHTML += `<div class="cal-cell other-month"></div>`; }
+        
+        const todayStr = new Date().toLocaleDateString('en-CA'); 
+        
+        for(let i = 1; i <= daysInMonth; i++) {
+            const dStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+            const isToday = dStr === todayStr ? 'today' : '';
+            const doseEntry = appData.dosages.find(r => r.date === dStr);
+            const doseHtml = doseEntry ? `<div class="cal-dose">${doseEntry.dose} mg</div>` : '';
+            
+            grid.innerHTML += `
+                <div class="cal-cell ${isToday}" onclick="openDoseModal('${dStr}')">
+                    <div class="cal-date">${i}</div>
+                    ${doseHtml}
+                </div>`;
+        }
+    }
+
+    function changeMonth(offset) {
+        currentCalDate.setMonth(currentCalDate.getMonth() + offset);
+        renderCalendar();
+    }
+
+    function openDoseModal(dateStr) {
+        if(appData.view_only) return showToast("You are viewing a shared account.");
+        
+        document.getElementById('modal-dose-date').value = dateStr;
+        const doseEntry = appData.dosages.find(r => r.date === dateStr);
+        document.getElementById('modal-dose-amount').value = doseEntry ? doseEntry.dose : '';
+        document.getElementById('btn-delete-dose').style.display = doseEntry ? 'block' : 'none';
+        
+        document.getElementById('dose-modal').classList.add('active');
+        document.body.style.overflow = 'hidden'; 
+        setTimeout(() => document.getElementById('modal-dose-amount').focus(), 100);
+    }
+
+    function closeDoseModal() {
+        document.getElementById('dose-modal').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    async function saveModalDose() {
+        const d = document.getElementById('modal-dose-date').value;
+        const v = document.getElementById('modal-dose-amount').value;
+        if(!d || !v) return showToast("Please enter an amount.");
+        if((await apiCall('save_dose', {date: d, dose: v})).success) { 
+            showToast("Saved!"); closeDoseModal(); loadData(); 
+        }
+    }
+    
+    async function deleteModalDose() {
+        const d = document.getElementById('modal-dose-date').value;
+        if(confirm("Remove the dosage record for this date?")) {
+            if((await apiCall('delete_dose', {date: d})).success) { 
+                showToast("Removed."); closeDoseModal(); loadData(); 
+            }
+        }
+    }
+
+    function renderDashboard() {
+        const list = document.getElementById('dashboard-list');
+        list.innerHTML = '';
+        let top12 = appData.inr.slice(0, 12).reverse(); 
+        let labels = [], data = [];
+        top12.forEach(r => {
+            labels.push(r.date); data.push(r.result);
+            list.insertAdjacentHTML('afterbegin', `<tr><td>${r.date}</td><td>${r.result}</td><td>${getStatusHTML(r.result)}</td></tr>`);
+        });
+        drawChart('dashboardChart', labels, data);
+    }
+
+    function renderHistory() {
+        const s = document.getElementById('hist-start').value;
+        const e = document.getElementById('hist-end').value;
+        const list = document.getElementById('history-list');
+        list.innerHTML = '';
+
+        let filtered = appData.inr.filter(r => (!s || r.date >= s) && (!e || r.date <= e)).reverse();
+        let labels = [], data = [];
+        filtered.forEach(r => {
+            labels.push(r.date); data.push(r.result);
+            list.insertAdjacentHTML('afterbegin', `<tr><td>${r.date}</td><td>${r.result}</td><td>${getStatusHTML(r.result)}</td></tr>`);
+        });
+        drawChart('historyChart', labels, data);
+    }
+
+    function drawChart(canvasId, labels, data) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        if(charts[canvasId]) charts[canvasId].destroy();
+        charts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: { labels: labels, datasets: [{ label: 'INR Result', data: data, borderColor: '#0d0e66', backgroundColor: 'rgba(13, 14, 102, 0.1)', fill: true, tension: 0.1 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { annotation: { annotations: { box1: { type: 'box', yMin: appData.settings.target_min, yMax: appData.settings.target_max, backgroundColor: 'rgba(40, 167, 69, 0.1)', borderWidth: 0 } } } },
+                scales: { y: { suggestedMin: 1.0, suggestedMax: 5.0 } }
+            }
+        });
+    }
+
+    async function saveINR() {
+        const d = document.getElementById('inr-date').value; const v = document.getElementById('inr-result').value;
+        if(!d || !v) return showToast("Provide a date and result.");
+        if((await apiCall('save_inr', {date: d, result: v})).success) { showToast("Result Logged"); document.getElementById('inr-result').value = ''; loadData(); }
+    }
+
+    async function saveSettings() {
+        const payload = {
+            name: document.getElementById('prof-name').value, dob: document.getElementById('prof-dob').value,
+            target_min: document.getElementById('target-min').value, target_max: document.getElementById('target-max').value,
+            saved_share_code: document.getElementById('saved-share-code').value
+        };
+        if((await apiCall('save_settings', payload)).success) { showToast("Saved!"); loadData(); }
+    }
+
+    function generateReport(type, format) {
+        const s = document.getElementById('rep-start').value; const e = document.getElementById('rep-end').value;
+        let data = type === 'inr' ? appData.inr : appData.dosages;
+        let filtered = data.filter(r => (!s || r.date >= s) && (!e || r.date <= e)).sort((a,b) => new Date(a.date) - new Date(b.date));
+        
+        if(format === 'csv') {
+            let csvContent = "data:text/csv;charset=utf-8,Date," + (type === 'inr' ? "Result,Status\n" : "Dosage (mg)\n");
+            filtered.forEach(row => { csvContent += type === 'inr' ? `${row.date},${row.result},${getStatusText(row.result)}\n` : `${row.date},${row.dose}\n`; });
+            const link = document.createElement("a"); link.setAttribute("href", encodeURI(csvContent)); link.setAttribute("download", `${type}_report.csv`);
+            document.body.appendChild(link); link.click(); showToast("CSV Ready");
+        } else if (format === 'pdf') {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF(); const dateStr = new Date().toLocaleDateString();
+            
+            if (type === 'inr') {
+                doc.setFontSize(18); doc.text(`My Warfarin - INR Results`, 14, 20);
+                doc.setFontSize(12); doc.text(`Patient Name: ${appData.settings.name || 'Not Set'}`, 14, 30);
+                doc.text(`DOB: ${appData.settings.dob || 'Not Set'}`, 14, 38); doc.text(`Generated: ${dateStr}`, 14, 46);
+                let body = filtered.map(r => [r.date, r.result, getStatusText(r.result)]);
+                doc.autoTable({
+                    startY: 55, head: [['Date', 'INR Result', 'Status']], body: body,
+                    didParseCell: function(data) {
+                        if(data.section === 'body' && data.column.index === 2) {
+                            if(data.cell.raw === 'Low' || data.cell.raw === 'High') data.cell.styles.textColor = [220, 53, 69];
+                            else if(data.cell.raw === 'Within Range') data.cell.styles.textColor = [40, 167, 69];
+                        }
+                    }
+                });
+                doc.save(`INR_report_${dateStr}.pdf`); showToast("PDF Ready");
+            } else if (type === 'calendar') {
+                let startDate = s ? new Date(s) : (filtered.length > 0 ? new Date(filtered[0].date) : new Date());
+                let endDate = e ? new Date(e) : (filtered.length > 0 ? new Date(filtered[filtered.length-1].date) : new Date());
+                let currentMonthPointer = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+                let endLimit = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+                let isFirstPage = true;
+
+                while (currentMonthPointer <= endLimit) {
+                    if (!isFirstPage) { doc.addPage(); }
+                    isFirstPage = false;
+                    let cy = currentMonthPointer.getFullYear(); let cm = currentMonthPointer.getMonth();
+                    doc.setFontSize(18); doc.text(`My Warfarin - Dosage Calendar`, 14, 20);
+                    doc.setFontSize(14); doc.text(`${currentMonthPointer.toLocaleString('default', { month: 'long' })} ${cy}`, 14, 30);
+                    doc.setFontSize(10); doc.text(`Patient Name: ${appData.settings.name || 'Not Set'} | DOB: ${appData.settings.dob || 'Not Set'}`, 14, 38);
+                    
+                    let firstDay = new Date(cy, cm, 1).getDay(); let daysInMonth = new Date(cy, cm + 1, 0).getDate();
+                    let calendarBody = []; let currentWeek = [];
+                    for(let i = 0; i < firstDay; i++) { currentWeek.push(""); }
+                    for(let day = 1; day <= daysInMonth; day++) {
+                        let dateString = `${cy}-${String(cm+1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        let doseEntry = appData.dosages.find(r => r.date === dateString); 
+                        currentWeek.push(doseEntry ? `${day}\n\n${doseEntry.dose} mg` : `${day}`);
+                        if(currentWeek.length === 7) { calendarBody.push(currentWeek); currentWeek = []; }
+                    }
+                    if(currentWeek.length > 0) { while(currentWeek.length < 7) { currentWeek.push(""); } calendarBody.push(currentWeek); }
+
+                    doc.autoTable({ startY: 45, head: [['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']], body: calendarBody, theme: 'grid', styles: { minCellHeight: 25, halign: 'center', valign: 'top', fontSize: 10 }, headStyles: { fillColor: [13, 14, 102], textColor: 255 } });
+                    currentMonthPointer.setMonth(currentMonthPointer.getMonth() + 1);
+                }
+                doc.save(`Calendar_report_${dateStr}.pdf`); showToast("PDF Ready");
+            }
+        }
+    }
+
+    async function loadAdminUsers() {
+        const res = await apiCall('admin_users');
+        if(!res.success) return;
+        const list = document.getElementById('admin-user-list'); list.innerHTML = '';
+        res.users.forEach(u => {
+            list.innerHTML += `<tr><td>${u.username}</td><td>${u.role}</td>
+            <td><button class="danger" style="padding:6px 12px; margin:0; width:auto; border-radius:4px;" onclick="deleteAdminUser(${u.id})">Delete</button></td></tr>`;
+        });
+    }
+    
+    async function saveAdminUser() {
+        const u = document.getElementById('adm-user').value; const p = document.getElementById('adm-pass').value; const r = document.getElementById('adm-role').value;
+        if(!u || !p) return showToast("Provide a username & password.");
+        if((await apiCall('admin_save_user', {username: u, password: p, role: r})).success) { showToast("User added!"); loadAdminUsers(); }
+    }
+    
+    async function deleteAdminUser(id) {
+        if(confirm("Erase this user and their data?") && (await apiCall('admin_delete_user', {id: id})).success) { showToast("Deleted"); loadAdminUsers(); }
+    }
+
+    async function backupData() {
+        const res = await apiCall('backup');
+        if(res.success) {
+            const blob = new Blob([JSON.stringify(res.backup)], {type: "application/json"});
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "my_warfarin_backup.json";
+            link.click(); showToast("Downloading...");
+        }
+    }
+    
+    function restoreData() {
+        const file = document.getElementById('json-upload').files[0];
+        if(!file) return showToast("Pick a file first.");
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                if((await apiCall('restore', JSON.parse(e.target.result))).success) { showToast("Restored!"); loadData(); }
+            } catch(err) { showToast("File invalid."); }
+        };
+        reader.readAsText(file);
+    }
+
+    document.getElementById('inr-date').valueAsDate = new Date();
+    </script>
+</body>
+
+</html>
