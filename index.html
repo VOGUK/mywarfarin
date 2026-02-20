@@ -155,7 +155,17 @@
             <br><br>My Warfarin
         </h2>
         <input type="text" id="username" placeholder="Username">
-        <input type="password" id="password" placeholder="Password">
+        
+        <div class="input-group" style="margin-bottom: 0;">
+            <input type="password" id="password" placeholder="Password">
+            <span id="toggle-pwd-icon" onclick="togglePassword()" title="Show/Hide Password" style="background: var(--surface); border-left: none; cursor: pointer; display: flex; align-items: center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+            </span>
+        </div>
+        
         <button class="primary" onclick="login()" style="margin-top: 15px;">Secure Login</button>
     </div>
 
@@ -342,6 +352,22 @@
         setTimeout(() => t.className = t.className.replace("show", ""), 3000);
     }
 
+    // NEW: Toggle Password Visibility
+    function togglePassword() {
+        const pwdInput = document.getElementById('password');
+        const iconSpan = document.getElementById('toggle-pwd-icon');
+        
+        if (pwdInput.type === 'password') {
+            pwdInput.type = 'text';
+            // Eye with a slash (Hide)
+            iconSpan.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+        } else {
+            pwdInput.type = 'password';
+            // Regular Eye (Show)
+            iconSpan.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+        }
+    }
+
     function adjustText(change) {
         let root = document.documentElement;
         let size = parseFloat(getComputedStyle(root).getPropertyValue('--font-size'));
@@ -378,6 +404,14 @@
         try { return await (await fetch(`api.php?action=${action}`, opts)).json(); } 
         catch (e) { showToast("Connection error. Check internet."); return {success: false}; }
     }
+
+    // Let user submit login via 'Enter' key
+    document.getElementById('password').addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            login();
+        }
+    });
 
     async function login() {
         const u = document.getElementById('username').value;
@@ -592,7 +626,6 @@
         if((await apiCall('save_inr', {date: d, result: v})).success) { showToast("Result Logged"); document.getElementById('inr-result').value = ''; loadData(); }
     }
 
-    // Standard profile settings save (no longer saves the share code)
     async function saveSettings() {
         const payload = {
             name: document.getElementById('prof-name').value, dob: document.getElementById('prof-dob').value,
@@ -601,7 +634,6 @@
         if((await apiCall('save_settings', payload)).success) { showToast("Saved!"); loadData(); }
     }
 
-    // NEW: Copy share code to clipboard
     function copyShareCode() {
         const code = document.getElementById('my-share-code').innerText;
         if(code && code !== '-') {
@@ -613,7 +645,6 @@
         }
     }
 
-    // NEW: Save the share code and jump directly to Dashboard
     async function applyShareCode() {
         const code = document.getElementById('saved-share-code').value.trim();
         if((await apiCall('update_share_code', {code: code})).success) { 
@@ -623,7 +654,7 @@
                 showToast("Viewing shared data!");
             }
             await loadData();
-            showView('dashboard'); // Jump to dashboard immediately to see the changes!
+            showView('dashboard'); 
         }
     }
 
