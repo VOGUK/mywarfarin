@@ -278,16 +278,19 @@
         <div class="card">
             <h3 style="margin-top:0;">Share Medical Data</h3>
             <p>Give this code to a doctor or family member so they can view your data.</p>
-            <div style="background:var(--bg); border:1px solid var(--border); padding:15px; border-radius:8px; text-align:center; margin-bottom:20px;">
+            <div style="display:flex; align-items:center; justify-content:center; gap:15px; background:var(--bg); border:1px solid var(--border); padding:15px; border-radius:8px; margin-bottom:20px;">
                 <strong id="my-share-code" style="color:var(--primary); font-size:1.5rem; letter-spacing:2px;">-</strong>
+                <button class="primary" onclick="copyShareCode()" style="width:auto; padding:8px 15px; margin:0;">Copy Code</button>
             </div>
             
             <hr style="border:0; border-top:1px solid var(--border); margin:20px 0;">
             
             <h3 style="margin-top:0;">View Someone Else</h3>
-            <label>Enter another user's 10-character code to view their records</label>
-            <input type="text" id="saved-share-code" placeholder="e.g. a1b2c3d4e5">
-            <button class="primary" id="btn-save-share" onclick="saveSettings()">Save Code & View Data</button>
+            <label>Enter a 10-character code to view their records (leave blank to return to your data)</label>
+            <div style="display:flex; gap:10px; margin-top:8px;">
+                <input type="text" id="saved-share-code" placeholder="e.g. a1b2c3d4e5" style="margin:0;">
+                <button class="primary" id="btn-save-share" onclick="applyShareCode()" style="width:auto; margin:0; white-space:nowrap;">View Data</button>
+            </div>
         </div>
         
         <div class="card" id="backup-panel">
@@ -533,7 +536,6 @@
         const ctx = document.getElementById(canvasId).getContext('2d');
         if(charts[canvasId]) charts[canvasId].destroy();
         
-        // Calculate point colors: Red if out of bounds, Blue if inside target
         let pointColors = data.map(val => {
             if (val < appData.settings.target_min || val > appData.settings.target_max) return '#dc3545';
             return '#0d0e66';
@@ -589,13 +591,39 @@
         if((await apiCall('save_inr', {date: d, result: v})).success) { showToast("Result Logged"); document.getElementById('inr-result').value = ''; loadData(); }
     }
 
+    // Standard profile settings save (no longer saves the share code)
     async function saveSettings() {
         const payload = {
             name: document.getElementById('prof-name').value, dob: document.getElementById('prof-dob').value,
-            target_min: document.getElementById('target-min').value, target_max: document.getElementById('target-max').value,
-            saved_share_code: document.getElementById('saved-share-code').value
+            target_min: document.getElementById('target-min').value, target_max: document.getElementById('target-max').value
         };
         if((await apiCall('save_settings', payload)).success) { showToast("Saved!"); loadData(); }
+    }
+
+    // NEW: Copy share code to clipboard
+    function copyShareCode() {
+        const code = document.getElementById('my-share-code').innerText;
+        if(code && code !== '-') {
+            navigator.clipboard.writeText(code).then(() => {
+                showToast("Share Code Copied!");
+            }).catch(() => {
+                showToast("Unable to copy code.");
+            });
+        }
+    }
+
+    // NEW: Save the share code and jump directly to Dashboard
+    async function applyShareCode() {
+        const code = document.getElementById('saved-share-code').value.trim();
+        if((await apiCall('update_share_code', {code: code})).success) { 
+            if(code === '') {
+                showToast("Returned to your own data.");
+            } else {
+                showToast("Viewing shared data!");
+            }
+            await loadData();
+            showView('dashboard'); // Jump to dashboard immediately to see the changes!
+        }
     }
 
     function generateReport(type, format) {
