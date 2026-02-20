@@ -78,6 +78,11 @@ if ($action === 'get_data') {
     $stmt = $db->prepare("SELECT name, dob, target_min, target_max, share_code, saved_share_code FROM users WHERE id = ?");
     $stmt->execute([$target_user_id]);
     $settings = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // Always return the logged-in user's saved_share_code so the input box stays populated
+    $stmt = $db->prepare("SELECT saved_share_code FROM users WHERE id = ?");
+    $stmt->execute([$user_id]);
+    $settings['saved_share_code'] = $stmt->fetchColumn();
 
     $stmt = $db->prepare("SELECT date, result FROM inr_results WHERE user_id = ? ORDER BY date DESC");
     $stmt->execute([$target_user_id]);
@@ -107,7 +112,6 @@ if ($action === 'save_dose' && !$view_only) {
     echo json_encode(['success' => true]); exit;
 }
 
-// New Delete Dose Endpoint
 if ($action === 'delete_dose' && !$view_only) {
     $data = json_decode(file_get_contents('php://input'), true);
     $stmt = $db->prepare("DELETE FROM dosages WHERE user_id = ? AND date = ?");
@@ -115,10 +119,19 @@ if ($action === 'delete_dose' && !$view_only) {
     echo json_encode(['success' => true]); exit;
 }
 
+// Profile Settings (Does not include share code)
 if ($action === 'save_settings' && !$view_only) {
     $data = json_decode(file_get_contents('php://input'), true);
-    $stmt = $db->prepare("UPDATE users SET name=?, dob=?, target_min=?, target_max=?, saved_share_code=? WHERE id=?");
-    $stmt->execute([$data['name'], $data['dob'], $data['target_min'], $data['target_max'], $data['saved_share_code'], $user_id]);
+    $stmt = $db->prepare("UPDATE users SET name=?, dob=?, target_min=?, target_max=? WHERE id=?");
+    $stmt->execute([$data['name'], $data['dob'], $data['target_min'], $data['target_max'], $user_id]);
+    echo json_encode(['success' => true]); exit;
+}
+
+// NEW: Separate endpoint to update share code so you can clear it even in View Only mode
+if ($action === 'update_share_code') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $stmt = $db->prepare("UPDATE users SET saved_share_code=? WHERE id=?");
+    $stmt->execute([$data['code'], $user_id]);
     echo json_encode(['success' => true]); exit;
 }
 
