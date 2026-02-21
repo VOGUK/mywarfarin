@@ -1,23 +1,23 @@
 {
-    "name": "My Warfarin",
-    "short_name": "My Warfarin",
-    "description": "Track your daily Warfarin dosage and INR history.",
-    "start_url": "/",
-    "display": "standalone",
-    "background_color": "#f4f6f9",
-    "theme_color": "#0d0e66",
-    "icons": [
-        {
-            "src": "Warfarin.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "any maskable"
-        },
-        {
-            "src": "Warfarin.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any maskable"
-        }
-    ]
+  "name": "My Warfarin",
+  "short_name": "My Warfarin",
+  "description": "Track your daily Warfarin dosage and INR history.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f6f9",
+  "theme_color": "#0d0e66",
+  "icons": [
+    {
+      "src": "Warfarin.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "Warfarin.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }
