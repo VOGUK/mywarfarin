@@ -1,0 +1,14 @@
+# Ignore the SQLite database (Crucial for privacy!)
+mywarfarin.sqlite
+
+# Ignore any local backups you've downloaded
+*.json
+# But don't ignore the app's manifest file
+!manifest.json
+
+# Ignore OS-generated files
+.DS_Store
+Thumbs.db
+
+# Ignore any log files
+*.log
