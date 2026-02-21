@@ -66,7 +66,6 @@
         button.danger:hover { opacity: 0.9; }
         
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; border-radius: 8px; border: 1px solid var(--border); }
-        /* Removed min-width to allow mobile fitting */
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th { background: rgba(13, 14, 102, 0.05); }
         th, td { padding: 12px 10px; border-bottom: 1px solid var(--border); }
@@ -97,7 +96,6 @@
             .nav-links { width: 100%; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; order: 3; }
         }
 
-        /* NEW: Mobile-specific tweaks to fit tables and calendar on portrait screens */
         @media (max-width: 600px) {
             .card { padding: 15px; }
             th, td { padding: 8px 4px; font-size: 0.85em; }
@@ -217,13 +215,22 @@
 
     <div id="settings-view" class="view">
         <h2>Settings</h2>
+        
         <div class="card" id="admin-panel" style="display:none; border-left: 5px solid var(--danger);">
-            <h3>Admin Panel</h3>
-            <input type="text" id="adm-user" placeholder="Username">
-            <input type="password" id="adm-pass" placeholder="Password">
-            <select id="adm-role"><option value="user">User</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select>
-            <button class="primary" onclick="saveAdminUser()">Add/Update User</button>
-            <div class="table-responsive"><table><thead><tr><th>User</th><th>Role</th><th>Action</th></tr></thead><tbody id="admin-user-list"></tbody></table></div>
+            <h3>Admin Panel: Manage Users</h3>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input type="text" id="adm-user" placeholder="Username" style="flex:1;">
+                <select id="adm-role" style="flex:1;"><option value="user">User</option><option value="viewer">Viewer</option><option value="admin">Admin</option></select>
+            </div>
+            <input type="password" id="adm-pass" placeholder="Password (required for new user)">
+            <button class="primary" style="margin-top: 10px; background: #dc3545;" onclick="saveAdminUser()">Save User</button>
+            
+            <div class="table-responsive" style="margin-top: 15px;">
+                <table>
+                    <thead><tr><th>User</th><th>Role</th><th style="text-align:right;">Actions</th></tr></thead>
+                    <tbody id="admin-user-list"></tbody>
+                </table>
+            </div>
         </div>
         
         <div class="card">
@@ -309,6 +316,17 @@
     </div>
 </div>
 
+<div id="delete-user-modal" class="modal">
+    <div class="modal-content" style="text-align: center;">
+        <h3 style="margin-top: 0; color: var(--danger);">Erase User Account?</h3>
+        <p id="delete-user-confirm-text" style="margin-bottom: 25px; color: var(--text);"></p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button class="danger" onclick="confirmDeleteUser()" style="flex: 1;">Erase Data</button>
+            <button style="background: var(--border); color: var(--text); flex: 1;" onclick="closeDeleteUserModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <div id="toast">Message</div>
 
 <script>
@@ -324,6 +342,10 @@
     let charts = {};
     let currentCalDate = new Date();
     let pendingDeleteDate = null;
+    
+    // Admin editing trackers
+    let currentEditUserId = null;
+    let pendingDeleteUserId = null;
 
     window.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('inr-date').valueAsDate = new Date(); 
@@ -413,7 +435,13 @@
     async function processSuccessfulLogin(role) {
         document.getElementById('top-nav').style.display = 'flex';
         document.getElementById('login-view').classList.remove('active');
-        if(role === 'admin') { document.getElementById('admin-panel').style.display = 'block'; loadAdminUsers(); }
+        
+        // Show admin panel and pull user list if they are an admin
+        if(role === 'admin') { 
+            document.getElementById('admin-panel').style.display = 'block'; 
+            loadAdminUsers(); 
+        }
+        
         await loadData();
         showView('dashboard');
     }
@@ -469,6 +497,82 @@
         renderCalendar();
         renderHistory();
     }
+
+    // --- ADMIN PANEL FUNCTIONS --- //
+    
+    async function loadAdminUsers() {
+        const res = await apiCall('admin_users');
+        if (res.success) {
+            const list = document.getElementById('admin-user-list');
+            list.innerHTML = '';
+            res.users.forEach(u => {
+                list.innerHTML += `<tr>
+                    <td><strong>${u.username}</strong></td>
+                    <td style="text-transform: capitalize;">${u.role}</td>
+                    <td style="text-align:right;">
+                        <button style="padding:4px 8px; font-size: 0.9em; width:auto; margin:0;" onclick="editAdminUser(${u.id}, '${u.username}', '${u.role}')">Edit</button>
+                        <button class="danger" style="padding:4px 8px; font-size: 0.9em; width:auto; margin:0; margin-left:3px;" onclick="promptDeleteUser(${u.id}, '${u.username}')">Del</button>
+                    </td>
+                </tr>`;
+            });
+        }
+    }
+
+    function editAdminUser(id, username, role) {
+        currentEditUserId = id;
+        document.getElementById('adm-user').value = username;
+        document.getElementById('adm-pass').value = '';
+        document.getElementById('adm-pass').placeholder = 'Leave blank to keep password';
+        document.getElementById('adm-role').value = role;
+    }
+
+    async function saveAdminUser() {
+        const u = document.getElementById('adm-user').value;
+        const p = document.getElementById('adm-pass').value;
+        const r = document.getElementById('adm-role').value;
+        
+        if (!u) { showToast("Username is required"); return; }
+        if (!currentEditUserId && !p) { showToast("Password is required for new users"); return; }
+        
+        const res = await apiCall('admin_save_user', {id: currentEditUserId, username: u, password: p, role: r});
+        if (res.success) {
+            showToast(currentEditUserId ? "User Updated!" : "User Added!");
+            // Reset the form
+            document.getElementById('adm-user').value = '';
+            document.getElementById('adm-pass').value = '';
+            document.getElementById('adm-pass').placeholder = 'Password (required for new user)';
+            document.getElementById('adm-role').value = 'user';
+            currentEditUserId = null;
+            // Reload the table
+            loadAdminUsers();
+        } else {
+            showToast("Error saving user.");
+        }
+    }
+
+    function promptDeleteUser(id, username) {
+        pendingDeleteUserId = id;
+        document.getElementById('delete-user-confirm-text').innerText = `Are you sure you want to completely erase the user "${username}" and all of their medical data? This cannot be undone.`;
+        document.getElementById('delete-user-modal').classList.add('active');
+    }
+
+    function closeDeleteUserModal() {
+        pendingDeleteUserId = null;
+        document.getElementById('delete-user-modal').classList.remove('active');
+    }
+
+    async function confirmDeleteUser() {
+        if(pendingDeleteUserId) {
+            const res = await apiCall('admin_delete_user', {id: pendingDeleteUserId});
+            if (res.success) {
+                showToast("User Erased!");
+                loadAdminUsers();
+                closeDeleteUserModal();
+            }
+        }
+    }
+
+    // --- SETTINGS / CORE FUNCTIONS --- //
 
     async function saveSettings() {
         const payload = {
@@ -591,7 +695,6 @@
         const year = currentCalDate.getFullYear(), month = currentCalDate.getMonth();
         document.getElementById('cal-month-year').innerText = currentCalDate.toLocaleString('default', {month:'long', year:'numeric'});
         
-        // UPDATED: Shift first day calculation so Monday is 0 and Sunday is 6
         let first = new Date(year, month, 1).getDay();
         first = first === 0 ? 6 : first - 1; 
 
@@ -760,7 +863,6 @@
                 doc.text(`${monthName}`, 14, firstPage ? 40 : 20);
 
                 let daysInMonth = new Date(mYear, mMonth + 1, 0).getDate();
-                // Adjust report to also start on Monday
                 let firstDayOfWeek = new Date(mYear, mMonth, 1).getDay();
                 firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
 
