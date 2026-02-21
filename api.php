@@ -21,7 +21,10 @@ $db->exec("
     );
 ");
 
-// Seed default admin
+// Safely upgrade the database to include the new Remember Token column (won't affect existing data)
+try { $db->exec("ALTER TABLE users ADD COLUMN remember_token TEXT"); } catch (Exception $e) { /* Column already exists */ }
+
+// Seed default admin if empty
 $stmt = $db->query("SELECT COUNT(*) FROM users");
 if ($stmt->fetchColumn() == 0) {
     $hash = password_hash('admin', PASSWORD_DEFAULT);
@@ -31,7 +34,8 @@ if ($stmt->fetchColumn() == 0) {
 
 $action = $_GET['action'] ?? '';
 
-// Authentication
+// --- AUTHENTICATION --- //
+
 if ($action === 'login') {
     $data = json_decode(file_get_contents('php://input'), true);
     $stmt = $db->prepare("SELECT * FROM users WHERE username = ?");
@@ -41,14 +45,56 @@ if ($action === 'login') {
     if ($user && password_verify($data['password'] ?? '', $user['password'])) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['role'] = $user['role'];
-        echo json_encode(['success' => true, 'role' => $user['role']]);
+        
+        $response = ['success' => true, 'role' => $user['role']];
+        
+        // Generate a highly secure random token if 'Remember Me' is checked
+        if (!empty($data['remember'])) {
+            $token = bin2hex(random_bytes(32)); 
+            $hashToken = hash('sha256', $token); // Hash it before saving to the DB for security
+            $stmt = $db->prepare("UPDATE users SET remember_token = ? WHERE id = ?");
+            $stmt->execute([$hashToken, $user['id']]);
+            $response['token'] = $token; // Send raw token back to browser
+        }
+        
+        echo json_encode($response);
     } else {
         echo json_encode(['success' => false, 'error' => 'Incorrect username or password.']);
     }
     exit;
 }
 
-if ($action === 'logout') { session_destroy(); echo json_encode(['success' => true]); exit; }
+if ($action === 'auto_login') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    if (empty($data['token'])) { echo json_encode(['success' => false]); exit; }
+    
+    $hashToken = hash('sha256', $data['token']); // Hash the incoming token to compare with DB
+    $stmt = $db->prepare("SELECT * FROM users WHERE remember_token = ?");
+    $stmt->execute([$hashToken]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($user) {
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['role'] = $user['role'];
+        echo json_encode(['success' => true, 'role' => $user['role']]);
+    } else {
+        echo json_encode(['success' => false]);
+    }
+    exit;
+}
+
+if ($action === 'logout') { 
+    if (isset($_SESSION['user_id'])) {
+        // Erase the remember token from the database for safety
+        $stmt = $db->prepare("UPDATE users SET remember_token = NULL WHERE id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+    }
+    session_destroy(); 
+    echo json_encode(['success' => true]); 
+    exit; 
+}
+
+// --- PROTECTED DATA ENDPOINTS --- //
 
 if (!isset($_SESSION['user_id'])) { echo json_encode(['success' => false, 'error' => 'Unauthorized']); exit; }
 
@@ -73,13 +119,11 @@ if (!empty($saved_share)) {
     }
 }
 
-// Data Endpoints
 if ($action === 'get_data') {
     $stmt = $db->prepare("SELECT name, dob, target_min, target_max, share_code, saved_share_code FROM users WHERE id = ?");
     $stmt->execute([$target_user_id]);
     $settings = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    // Always return the logged-in user's saved_share_code so the input box stays populated
     $stmt = $db->prepare("SELECT saved_share_code FROM users WHERE id = ?");
     $stmt->execute([$user_id]);
     $settings['saved_share_code'] = $stmt->fetchColumn();
@@ -119,7 +163,6 @@ if ($action === 'delete_dose' && !$view_only) {
     echo json_encode(['success' => true]); exit;
 }
 
-// Profile Settings (Does not include share code)
 if ($action === 'save_settings' && !$view_only) {
     $data = json_decode(file_get_contents('php://input'), true);
     $stmt = $db->prepare("UPDATE users SET name=?, dob=?, target_min=?, target_max=? WHERE id=?");
@@ -127,7 +170,6 @@ if ($action === 'save_settings' && !$view_only) {
     echo json_encode(['success' => true]); exit;
 }
 
-// NEW: Separate endpoint to update share code so you can clear it even in View Only mode
 if ($action === 'update_share_code') {
     $data = json_decode(file_get_contents('php://input'), true);
     $stmt = $db->prepare("UPDATE users SET saved_share_code=? WHERE id=?");
@@ -135,7 +177,6 @@ if ($action === 'update_share_code') {
     echo json_encode(['success' => true]); exit;
 }
 
-// Admin Endpoints
 if ($action === 'admin_users' && $is_admin) {
     $stmt = $db->query("SELECT id, username, role FROM users");
     echo json_encode(['success' => true, 'users' => $stmt->fetchAll(PDO::FETCH_ASSOC)]); exit;
@@ -143,10 +184,9 @@ if ($action === 'admin_users' && $is_admin) {
 
 if ($action === 'admin_save_user' && $is_admin) {
     $data = json_decode(file_get_contents('php://input'), true);
-    $share = substr(md5(uniqid()), 0, 10);
     $hash = password_hash($data['password'], PASSWORD_DEFAULT);
-    
     if (empty($data['id'])) {
+        $share = substr(md5(uniqid()), 0, 10);
         $stmt = $db->prepare("INSERT INTO users (username, password, role, share_code) VALUES (?, ?, ?, ?)");
         $stmt->execute([$data['username'], $hash, $data['role'], $share]);
     } else {
@@ -166,7 +206,6 @@ if ($action === 'admin_delete_user' && $is_admin) {
     echo json_encode(['success' => true]); exit;
 }
 
-// Backup & Restore
 if ($action === 'backup' && !$view_only) {
     $stmt = $db->prepare("SELECT date, result FROM inr_results WHERE user_id = ?"); $stmt->execute([$user_id]); $inr = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $stmt = $db->prepare("SELECT date, dose FROM dosages WHERE user_id = ?"); $stmt->execute([$user_id]); $dose = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -177,15 +216,10 @@ if ($action === 'restore' && !$view_only) {
     $data = json_decode(file_get_contents('php://input'), true);
     $db->prepare("DELETE FROM inr_results WHERE user_id=?")->execute([$user_id]);
     $db->prepare("DELETE FROM dosages WHERE user_id=?")->execute([$user_id]);
-    
     $stmt_inr = $db->prepare("INSERT INTO inr_results (user_id, date, result) VALUES (?, ?, ?)");
     foreach ($data['inr'] as $row) $stmt_inr->execute([$user_id, $row['date'], $row['result']]);
-    
     $stmt_dose = $db->prepare("INSERT INTO dosages (user_id, date, dose) VALUES (?, ?, ?)");
     foreach ($data['dosages'] as $row) $stmt_dose->execute([$user_id, $row['date'], $row['dose']]);
-    
     echo json_encode(['success' => true]); exit;
 }
-
-echo json_encode(['success' => false, 'error' => 'Invalid endpoint']);
 ?>
