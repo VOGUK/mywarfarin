@@ -139,7 +139,6 @@ if ($action === 'get_data') {
     exit;
 }
 
-// UPDATED: Save INR now deletes existing record for that date to allow easy editing
 if ($action === 'save_inr' && !$view_only) {
     $data = json_decode(file_get_contents('php://input'), true);
     $stmt = $db->prepare("DELETE FROM inr_results WHERE user_id = ? AND date = ?");
@@ -149,7 +148,6 @@ if ($action === 'save_inr' && !$view_only) {
     echo json_encode(['success' => true]); exit;
 }
 
-// NEW: Delete INR Endpoint
 if ($action === 'delete_inr' && !$view_only) {
     $data = json_decode(file_get_contents('php://input'), true);
     $stmt = $db->prepare("DELETE FROM inr_results WHERE user_id = ? AND date = ?");
@@ -192,16 +190,28 @@ if ($action === 'admin_users' && $is_admin) {
     echo json_encode(['success' => true, 'users' => $stmt->fetchAll(PDO::FETCH_ASSOC)]); exit;
 }
 
+// UPDATED: Now safely handles empty passwords during user updates
 if ($action === 'admin_save_user' && $is_admin) {
     $data = json_decode(file_get_contents('php://input'), true);
-    $hash = password_hash($data['password'], PASSWORD_DEFAULT);
+    
     if (empty($data['id'])) {
+        // Creating a new user
+        $hash = password_hash($data['password'], PASSWORD_DEFAULT);
         $share = substr(md5(uniqid()), 0, 10);
         $stmt = $db->prepare("INSERT INTO users (username, password, role, share_code) VALUES (?, ?, ?, ?)");
         $stmt->execute([$data['username'], $hash, $data['role'], $share]);
     } else {
-        $stmt = $db->prepare("UPDATE users SET username=?, password=?, role=? WHERE id=?");
-        $stmt->execute([$data['username'], $hash, $data['role'], $data['id']]);
+        // Updating an existing user
+        if (!empty($data['password'])) {
+            // Update everything including the new password
+            $hash = password_hash($data['password'], PASSWORD_DEFAULT);
+            $stmt = $db->prepare("UPDATE users SET username=?, password=?, role=? WHERE id=?");
+            $stmt->execute([$data['username'], $hash, $data['role'], $data['id']]);
+        } else {
+            // Keep the old password, just update username and role
+            $stmt = $db->prepare("UPDATE users SET username=?, role=? WHERE id=?");
+            $stmt->execute([$data['username'], $data['role'], $data['id']]);
+        }
     }
     echo json_encode(['success' => true]); exit;
 }
