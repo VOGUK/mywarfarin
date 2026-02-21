@@ -21,8 +21,10 @@ $db->exec("
     );
 ");
 
-// Safely upgrade the database to include the new Remember Token column (won't affect existing data)
-try { $db->exec("ALTER TABLE users ADD COLUMN remember_token TEXT"); } catch (Exception $e) { /* Column already exists */ }
+// Safely upgrade the database with new columns
+try { $db->exec("ALTER TABLE users ADD COLUMN remember_token TEXT"); } catch (Exception $e) {}
+try { $db->exec("ALTER TABLE users ADD COLUMN reminder_time TEXT DEFAULT '09:00'"); } catch (Exception $e) {}
+try { $db->exec("ALTER TABLE users ADD COLUMN reminder_enabled INTEGER DEFAULT 0"); } catch (Exception $e) {}
 
 // Seed default admin if empty
 $stmt = $db->query("SELECT COUNT(*) FROM users");
@@ -48,13 +50,12 @@ if ($action === 'login') {
         
         $response = ['success' => true, 'role' => $user['role']];
         
-        // Generate a highly secure random token if 'Remember Me' is checked
         if (!empty($data['remember'])) {
             $token = bin2hex(random_bytes(32)); 
-            $hashToken = hash('sha256', $token); // Hash it before saving to the DB for security
+            $hashToken = hash('sha256', $token);
             $stmt = $db->prepare("UPDATE users SET remember_token = ? WHERE id = ?");
             $stmt->execute([$hashToken, $user['id']]);
-            $response['token'] = $token; // Send raw token back to browser
+            $response['token'] = $token; 
         }
         
         echo json_encode($response);
@@ -68,7 +69,7 @@ if ($action === 'auto_login') {
     $data = json_decode(file_get_contents('php://input'), true);
     if (empty($data['token'])) { echo json_encode(['success' => false]); exit; }
     
-    $hashToken = hash('sha256', $data['token']); // Hash the incoming token to compare with DB
+    $hashToken = hash('sha256', $data['token']);
     $stmt = $db->prepare("SELECT * FROM users WHERE remember_token = ?");
     $stmt->execute([$hashToken]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -85,7 +86,6 @@ if ($action === 'auto_login') {
 
 if ($action === 'logout') { 
     if (isset($_SESSION['user_id'])) {
-        // Erase the remember token from the database for safety
         $stmt = $db->prepare("UPDATE users SET remember_token = NULL WHERE id = ?");
         $stmt->execute([$_SESSION['user_id']]);
     }
@@ -102,7 +102,6 @@ $user_id = $_SESSION['user_id'];
 $is_admin = $_SESSION['role'] === 'admin';
 $is_viewer = $_SESSION['role'] === 'viewer';
 
-// Determine which user's data to view
 $stmt = $db->prepare("SELECT saved_share_code FROM users WHERE id = ?");
 $stmt->execute([$user_id]);
 $saved_share = $stmt->fetchColumn();
@@ -120,7 +119,7 @@ if (!empty($saved_share)) {
 }
 
 if ($action === 'get_data') {
-    $stmt = $db->prepare("SELECT name, dob, target_min, target_max, share_code, saved_share_code FROM users WHERE id = ?");
+    $stmt = $db->prepare("SELECT name, dob, target_min, target_max, share_code, saved_share_code, reminder_time, reminder_enabled FROM users WHERE id = ?");
     $stmt->execute([$target_user_id]);
     $settings = $stmt->fetch(PDO::FETCH_ASSOC);
     
@@ -140,10 +139,21 @@ if ($action === 'get_data') {
     exit;
 }
 
+// UPDATED: Save INR now deletes existing record for that date to allow easy editing
 if ($action === 'save_inr' && !$view_only) {
     $data = json_decode(file_get_contents('php://input'), true);
+    $stmt = $db->prepare("DELETE FROM inr_results WHERE user_id = ? AND date = ?");
+    $stmt->execute([$user_id, $data['date']]);
     $stmt = $db->prepare("INSERT INTO inr_results (user_id, date, result) VALUES (?, ?, ?)");
     $stmt->execute([$user_id, $data['date'], $data['result']]);
+    echo json_encode(['success' => true]); exit;
+}
+
+// NEW: Delete INR Endpoint
+if ($action === 'delete_inr' && !$view_only) {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $stmt = $db->prepare("DELETE FROM inr_results WHERE user_id = ? AND date = ?");
+    $stmt->execute([$user_id, $data['date']]);
     echo json_encode(['success' => true]); exit;
 }
 
@@ -165,8 +175,8 @@ if ($action === 'delete_dose' && !$view_only) {
 
 if ($action === 'save_settings' && !$view_only) {
     $data = json_decode(file_get_contents('php://input'), true);
-    $stmt = $db->prepare("UPDATE users SET name=?, dob=?, target_min=?, target_max=? WHERE id=?");
-    $stmt->execute([$data['name'], $data['dob'], $data['target_min'], $data['target_max'], $user_id]);
+    $stmt = $db->prepare("UPDATE users SET name=?, dob=?, target_min=?, target_max=?, reminder_time=?, reminder_enabled=? WHERE id=?");
+    $stmt->execute([$data['name'], $data['dob'], $data['target_min'], $data['target_max'], $data['reminder_time'], $data['reminder_enabled'], $user_id]);
     echo json_encode(['success' => true]); exit;
 }
 
