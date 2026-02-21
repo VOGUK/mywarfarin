@@ -66,9 +66,10 @@
         button.danger:hover { opacity: 0.9; }
         
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; border-radius: 8px; border: 1px solid var(--border); }
-        table { width: 100%; border-collapse: collapse; text-align: left; min-width: 400px; }
+        /* Removed min-width to allow mobile fitting */
+        table { width: 100%; border-collapse: collapse; text-align: left; }
         th { background: rgba(13, 14, 102, 0.05); }
-        th, td { padding: 12px 15px; border-bottom: 1px solid var(--border); }
+        th, td { padding: 12px 10px; border-bottom: 1px solid var(--border); }
 
         #toast { visibility: hidden; min-width: 250px; background-color: var(--primary); color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 2000; left: 50%; transform: translateX(-50%); bottom: 30px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); }
         #toast.show { visibility: visible; animation: fadein 0.3s, fadeout 0.3s 2.7s; }
@@ -94,6 +95,16 @@
             .nav-brand { width: auto; }
             .controls { width: auto; flex-grow: 1; gap: 12px; }
             .nav-links { width: 100%; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; order: 3; }
+        }
+
+        /* NEW: Mobile-specific tweaks to fit tables and calendar on portrait screens */
+        @media (max-width: 600px) {
+            .card { padding: 15px; }
+            th, td { padding: 8px 4px; font-size: 0.85em; }
+            .cal-grid { gap: 2px; }
+            .cal-cell { padding: 2px; min-height: 75px; }
+            .cal-dose { font-size: 0.7em; padding: 3px 1px; }
+            .cal-day-header { font-size: 0.75em; padding: 4px 0; }
         }
     </style>
 </head>
@@ -164,12 +175,12 @@
         <h2>Dosage Calendar</h2>
         <div class="card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <button class="primary" style="width:auto;" onclick="changeMonth(-1)">&laquo; Prev</button>
+                <button class="primary" style="width:auto; padding: 10px 15px;" onclick="changeMonth(-1)">&laquo; Prev</button>
                 <h3 id="cal-month-year" style="margin:0;">Month Year</h3>
-                <button class="primary" style="width:auto;" onclick="changeMonth(1)">Next &raquo;</button>
+                <button class="primary" style="width:auto; padding: 10px 15px;" onclick="changeMonth(1)">Next &raquo;</button>
             </div>
             <div class="cal-grid" id="cal-grid-headers">
-                <div class="cal-day-header">Sun</div><div class="cal-day-header">Mon</div><div class="cal-day-header">Tue</div><div class="cal-day-header">Wed</div><div class="cal-day-header">Thu</div><div class="cal-day-header">Fri</div><div class="cal-day-header">Sat</div>
+                <div class="cal-day-header">Mon</div><div class="cal-day-header">Tue</div><div class="cal-day-header">Wed</div><div class="cal-day-header">Thu</div><div class="cal-day-header">Fri</div><div class="cal-day-header">Sat</div><div class="cal-day-header">Sun</div>
             </div>
             <div class="cal-grid" id="cal-grid-days"></div>
         </div>
@@ -444,7 +455,6 @@
         appData = res;
         
         document.getElementById('prof-name').value = appData.settings.name || '';
-        // UPDATED: Now loads and displays the saved Date of Birth correctly
         document.getElementById('prof-dob').value = appData.settings.dob || '';
         document.getElementById('target-min').value = appData.settings.target_min;
         document.getElementById('target-max').value = appData.settings.target_max;
@@ -580,7 +590,12 @@
     function renderCalendar() {
         const year = currentCalDate.getFullYear(), month = currentCalDate.getMonth();
         document.getElementById('cal-month-year').innerText = currentCalDate.toLocaleString('default', {month:'long', year:'numeric'});
-        const first = new Date(year, month, 1).getDay(), days = new Date(year, month + 1, 0).getDate();
+        
+        // UPDATED: Shift first day calculation so Monday is 0 and Sunday is 6
+        let first = new Date(year, month, 1).getDay();
+        first = first === 0 ? 6 : first - 1; 
+
+        const days = new Date(year, month + 1, 0).getDate();
         const grid = document.getElementById('cal-grid-days'); grid.innerHTML = '';
         
         const today = new Date();
@@ -638,8 +653,8 @@
                 <td>${r.result}</td>
                 <td>${getStatusHTML(r.result)}</td>
                 ${appData.view_only ? '' : `<td style="text-align:right;">
-                    <button style="padding:4px 8px; width:auto; margin:0;" onclick="editINR('${r.date}', ${r.result})">Edit</button>
-                    <button class="danger" style="padding:4px 8px; width:auto; margin:0; margin-left:5px;" onclick="promptDeleteINR('${r.date}')">Del</button>
+                    <button style="padding:4px 8px; font-size: 0.9em; width:auto; margin:0;" onclick="editINR('${r.date}', ${r.result})">Edit</button>
+                    <button class="danger" style="padding:4px 8px; font-size: 0.9em; width:auto; margin:0; margin-left:3px;" onclick="promptDeleteINR('${r.date}')">Del</button>
                 </td>`}
             </tr>`;
         });
@@ -745,7 +760,10 @@
                 doc.text(`${monthName}`, 14, firstPage ? 40 : 20);
 
                 let daysInMonth = new Date(mYear, mMonth + 1, 0).getDate();
+                // Adjust report to also start on Monday
                 let firstDayOfWeek = new Date(mYear, mMonth, 1).getDay();
+                firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+
                 let body = [], week = new Array(7).fill(""), currentDay = 1;
 
                 for (let i = firstDayOfWeek; i < 7; i++) {
@@ -769,7 +787,7 @@
 
                 doc.autoTable({
                     startY: firstPage ? 45 : 25,
-                    head: [['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']],
+                    head: [['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']],
                     body: body,
                     theme: 'grid',
                     styles: { minCellHeight: 25, valign: 'top', halign: 'left', cellPadding: 2 },
