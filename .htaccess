@@ -1,0 +1,17 @@
+# Block public access to SQLite database files
+<Files ~ "\.(sqlite|db)$">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Optional: Block access to the backup JSON files just in case
+<Files ~ "\.json$">
+    Order allow,deny
+    Deny from all
+</Files>
+
+#Fixing Server Security Block
+<Files "manifest.json">
+    Order Allow,Deny
+    Allow from all
+</Files>
