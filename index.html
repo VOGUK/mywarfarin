@@ -162,6 +162,12 @@
             <div id="dashboard-today-dose" style="font-size: 2.5em; font-weight: bold;">-</div>
         </div>
 
+        <div id="dashboard-blood-test-card" class="card" style="display: none; border-left: 5px solid var(--danger); padding: 15px; background: rgba(220, 53, 69, 0.05);">
+            <h3 id="blood-test-countdown" style="margin: 0; color: var(--danger); text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <span style="font-size: 1.4em;">🩸</span> INR Blood Test
+            </h3>
+        </div>
+
         <div class="card"><div class="chart-wrapper"><canvas id="dashboardChart"></canvas></div></div>
         <div class="card">
             <h3>Last 12 Results</h3>
@@ -246,24 +252,6 @@
                 <div style="flex:1;"><label>Max</label><input type="number" id="target-max" placeholder="3.5" step="0.1"></div>
             </div>
 
-            <h3 style="margin-top: 25px;">Daily Reminder</h3>
-            
-            <div style="margin-bottom: 15px;">
-                <label style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-weight: bold; color: var(--text);">
-                    <input type="checkbox" id="reminder-enabled" style="width: auto; margin: 0; transform: scale(1.3);"> 
-                    Enable Daily Reminder
-                </label>
-            </div>
-
-            <div style="display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap;">
-                <input type="time" id="reminder-time" style="flex: 1; min-width: 120px; margin: 0;">
-                <button class="primary" style="flex: 1; min-width: 150px; margin: 0; background: #17a2b8;" onclick="enableNotifications()">Grant Browser Permission</button>
-            </div>
-            
-            <p style="font-size: 0.85em; color: var(--text-muted); line-height: 1.5; margin-top: 15px; background: rgba(220, 53, 69, 0.05); padding: 15px; border-radius: 8px; border-left: 4px solid var(--danger);">
-                <strong style="color: var(--danger);">IMPORTANT SAFETY WARNING:</strong> This reminder feature is provided as a secondary convenience only and <strong>must NOT be relied upon as your primary method</strong> for remembering medication. Technical factors and background power-saving settings on all devices (including Android, iOS, and Desktops) can cause notifications to be delayed, silenced, or fail to trigger entirely. Because missing a dose of Warfarin carries significant medical risks, you must use a dedicated, fail-safe alarm or physical pill-organizer as your primary reminder system. By enabling this feature, you acknowledge that you remain solely responsible for your medication schedule and that this app is not a substitute for professional medical management.
-            </p>
-            
             <button class="primary" onclick="saveSettings()" style="margin-top: 15px;">Save Changes</button>
         </div>
 
@@ -297,6 +285,14 @@
         <h3 style="margin-top: 0; color: var(--primary);">Log Dosage</h3>
         <input type="date" id="modal-dose-date" readonly>
         <input type="number" id="modal-dose-amount" placeholder="Dose (mg)" step="0.5" onkeypress="if(event.key === 'Enter') saveModalDose()">
+        
+        <div style="margin: 15px 0 5px 5px; text-align: left;">
+            <label style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="modal-blood-test" style="width: auto; margin: 0; transform: scale(1.2);"> 
+                <span style="font-size: 0.95rem; font-weight: bold; color: var(--danger);">INR Blood Test Scheduled</span>
+            </label>
+        </div>
+
         <div style="display: flex; gap: 10px; margin-top: 15px;">
             <button class="primary" onclick="saveModalDose()">Save</button>
             <button class="danger" onclick="deleteModalDose()">Delete</button>
@@ -338,12 +334,10 @@
         });
     }
 
-    let appData = { settings: { target_min: 2.5, target_max: 3.5, reminder_time: '09:00', reminder_enabled: 0 }, inr: [], dosages: [], view_only: false };
+    let appData = { settings: { target_min: 2.5, target_max: 3.5 }, inr: [], dosages: [], view_only: false };
     let charts = {};
     let currentCalDate = new Date();
     let pendingDeleteDate = null;
-    
-    // Admin editing trackers
     let currentEditUserId = null;
     let pendingDeleteUserId = null;
 
@@ -360,42 +354,6 @@
             }
         }
     });
-
-    setInterval(() => {
-        if (appData && appData.settings && appData.settings.reminder_enabled == 1 && appData.settings.reminder_time && ("Notification" in window) && Notification.permission === "granted") {
-            const now = new Date();
-            const currentHHMM = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
-            
-            if (currentHHMM === appData.settings.reminder_time) {
-                const todayStr = now.toLocaleDateString();
-                const lastNotified = localStorage.getItem('warfarin_last_notified');
-                
-                if (lastNotified !== todayStr) {
-                    new Notification("My Warfarin Reminder", {
-                        body: "It is time to check today's Warfarin dose!",
-                        icon: "Warfarin.png"
-                    });
-                    localStorage.setItem('warfarin_last_notified', todayStr);
-                }
-            }
-        }
-    }, 60000); 
-
-    function enableNotifications() {
-        if (!("Notification" in window)) {
-            showToast("Your browser does not support notifications.");
-        } else if (Notification.permission === "granted") {
-            showToast("Permission already granted! Check the box to enable.");
-        } else if (Notification.permission !== "denied") {
-            Notification.requestPermission().then(permission => {
-                if (permission === "granted") {
-                    showToast("Browser Permission Granted!");
-                } else {
-                    showToast("Permission denied by browser.");
-                }
-            });
-        }
-    }
 
     function showToast(msg) {
         const t = document.getElementById("toast"); t.innerText = msg; t.className = "show";
@@ -436,7 +394,6 @@
         document.getElementById('top-nav').style.display = 'flex';
         document.getElementById('login-view').classList.remove('active');
         
-        // Show admin panel and pull user list if they are an admin
         if(role === 'admin') { 
             document.getElementById('admin-panel').style.display = 'block'; 
             loadAdminUsers(); 
@@ -486,8 +443,6 @@
         document.getElementById('prof-dob').value = appData.settings.dob || '';
         document.getElementById('target-min').value = appData.settings.target_min;
         document.getElementById('target-max').value = appData.settings.target_max;
-        document.getElementById('reminder-time').value = appData.settings.reminder_time || '09:00'; 
-        document.getElementById('reminder-enabled').checked = (appData.settings.reminder_enabled == 1);
         document.getElementById('my-share-code').innerText = appData.settings.share_code;
         document.getElementById('saved-share-code').value = appData.settings.saved_share_code || '';
         
@@ -498,8 +453,6 @@
         renderHistory();
     }
 
-    // --- ADMIN PANEL FUNCTIONS --- //
-    
     async function loadAdminUsers() {
         const res = await apiCall('admin_users');
         if (res.success) {
@@ -537,17 +490,13 @@
         const res = await apiCall('admin_save_user', {id: currentEditUserId, username: u, password: p, role: r});
         if (res.success) {
             showToast(currentEditUserId ? "User Updated!" : "User Added!");
-            // Reset the form
             document.getElementById('adm-user').value = '';
             document.getElementById('adm-pass').value = '';
             document.getElementById('adm-pass').placeholder = 'Password (required for new user)';
             document.getElementById('adm-role').value = 'user';
             currentEditUserId = null;
-            // Reload the table
             loadAdminUsers();
-        } else {
-            showToast("Error saving user.");
-        }
+        } else { showToast("Error saving user."); }
     }
 
     function promptDeleteUser(id, username) {
@@ -572,16 +521,12 @@
         }
     }
 
-    // --- SETTINGS / CORE FUNCTIONS --- //
-
     async function saveSettings() {
         const payload = {
             name: document.getElementById('prof-name').value, 
             dob: document.getElementById('prof-dob').value,
             target_min: document.getElementById('target-min').value, 
-            target_max: document.getElementById('target-max').value,
-            reminder_time: document.getElementById('reminder-time').value,
-            reminder_enabled: document.getElementById('reminder-enabled').checked ? 1 : 0
+            target_max: document.getElementById('target-max').value
         };
         if((await apiCall('save_settings', payload)).success) { 
             showToast("Saved!"); 
@@ -617,15 +562,9 @@
                         showToast("Data Restored!");
                         loadData();
                         document.getElementById('restore-file').value = ''; 
-                    } else {
-                        showToast("Restore failed.");
-                    }
-                } else {
-                    showToast("Invalid backup file.");
-                }
-            } catch (err) {
-                showToast("Error reading file.");
-            }
+                    } else { showToast("Restore failed."); }
+                } else { showToast("Invalid backup file."); }
+            } catch (err) { showToast("Error reading file."); }
         };
         reader.readAsText(file);
     }
@@ -669,12 +608,47 @@
         const doseEntry = appData.dosages.find(r => r.date === lookupDate);
         const doseElem = document.getElementById('dashboard-today-dose');
         
-        if (doseEntry && doseEntry.dose) {
+        if (doseEntry && doseEntry.dose && doseEntry.dose !== '') {
             doseElem.innerText = doseEntry.dose + " mg";
             doseElem.style.fontSize = "2.5em";
         } else {
             doseElem.innerText = "No dose entered";
             doseElem.style.fontSize = "1.5em";
+        }
+
+        const testCard = document.getElementById('dashboard-blood-test-card');
+        let upcomingTest = null;
+        let minDays = 999;
+        
+        const todayDateObj = new Date();
+        todayDateObj.setHours(0,0,0,0);
+
+        appData.dosages.forEach(d => {
+            if (d.blood_test == 1) {
+                const [ty, tm, td] = d.date.split('-');
+                const testDateObj = new Date(ty, tm - 1, td);
+                const diffTime = testDateObj - todayDateObj;
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays >= 0 && diffDays < minDays) {
+                    minDays = diffDays;
+                    upcomingTest = d.date;
+                }
+            }
+        });
+
+        if (minDays <= 7) {
+            testCard.style.display = 'block';
+            const textElem = document.getElementById('blood-test-countdown');
+            if (minDays === 0) {
+                textElem.innerHTML = `<span style="font-size: 1.4em;">🩸</span> INR Blood Test is Today!`;
+            } else if (minDays === 1) {
+                textElem.innerHTML = `<span style="font-size: 1.4em;">🩸</span> INR Blood Test Tomorrow!`;
+            } else {
+                textElem.innerHTML = `<span style="font-size: 1.4em;">🩸</span> INR Blood Test in ${minDays} days`;
+            }
+        } else {
+            testCard.style.display = 'none';
         }
 
         const list = document.getElementById('dashboard-list'); list.innerHTML = '';
@@ -710,8 +684,15 @@
             const dose = appData.dosages.find(d => d.date === dStr);
             
             const extraStyle = (dStr === todayStr) ? 'border: 2px solid var(--primary); background: rgba(13, 14, 102, 0.05);' : '';
+            const hasTest = dose && dose.blood_test == 1;
             
-            grid.innerHTML += `<div class="cal-cell" style="${extraStyle}" onclick="openDoseModal('${dStr}')"><b style="${dStr === todayStr ? 'color: var(--primary); font-size: 1.1em;' : ''}">${i}</b>${dose ? `<div class="cal-dose">${dose.dose}mg</div>`:''}</div>`;
+            grid.innerHTML += `<div class="cal-cell" style="${extraStyle}" onclick="openDoseModal('${dStr}')">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <b style="${dStr === todayStr ? 'color: var(--primary); font-size: 1.1em;' : ''}">${i}</b>
+                    ${hasTest ? `<span title="Scheduled Blood Test" style="font-size: 1.1em; line-height: 1;">🩸</span>` : ''}
+                </div>
+                ${(dose && dose.dose && dose.dose !== '') ? `<div class="cal-dose">${dose.dose}mg</div>`:''}
+            </div>`;
         }
     }
 
@@ -719,7 +700,9 @@
         if(appData.view_only) return;
         document.getElementById('modal-dose-date').value = date;
         const dose = appData.dosages.find(d => d.date === date);
-        document.getElementById('modal-dose-amount').value = dose ? dose.dose : '';
+        document.getElementById('modal-dose-amount').value = (dose && dose.dose) ? dose.dose : '';
+        document.getElementById('modal-blood-test').checked = (dose && dose.blood_test == 1);
+        
         document.getElementById('dose-modal').classList.add('active');
         setTimeout(() => document.getElementById('modal-dose-amount').focus(), 100);
     }
@@ -729,10 +712,18 @@
     async function saveModalDose() {
         const d = document.getElementById('modal-dose-date').value;
         const a = document.getElementById('modal-dose-amount').value;
-        if(!a) return;
-        await apiCall('save_dose', {date: d, dose: a});
+        const b = document.getElementById('modal-blood-test').checked ? 1 : 0;
+        
+        if(!a && b === 0) {
+            await apiCall('delete_dose', {date: d});
+            closeDoseModal();
+            loadData();
+            return;
+        }
+        
+        await apiCall('save_dose', {date: d, dose: a, blood_test: b});
         closeDoseModal();
-        showToast("Dose Saved!");
+        showToast("Saved!");
         loadData();
     }
     
@@ -740,7 +731,7 @@
         const d = document.getElementById('modal-dose-date').value;
         await apiCall('delete_dose', {date: d});
         closeDoseModal();
-        showToast("Dose Deleted!");
+        showToast("Deleted!");
         loadData(); 
     }
 
@@ -871,7 +862,9 @@
                 for (let i = firstDayOfWeek; i < 7; i++) {
                     let dStr = `${mYear}-${String(mMonth+1).padStart(2,'0')}-${String(currentDay).padStart(2,'0')}`;
                     let dose = appData.dosages.find(d => d.date === dStr);
-                    week[i] = `${currentDay}\n${dose ? dose.dose + ' mg' : ''}`;
+                    let doseText = dose && dose.dose ? dose.dose + ' mg' : '';
+                    let testText = dose && dose.blood_test == 1 ? '[Blood Test]' : '';
+                    week[i] = `${currentDay}\n${doseText}\n${testText}`.trim();
                     currentDay++;
                 }
                 body.push(week);
@@ -881,7 +874,9 @@
                     for (let i = 0; i < 7 && currentDay <= daysInMonth; i++) {
                         let dStr = `${mYear}-${String(mMonth+1).padStart(2,'0')}-${String(currentDay).padStart(2,'0')}`;
                         let dose = appData.dosages.find(d => d.date === dStr);
-                        week[i] = `${currentDay}\n${dose ? dose.dose + ' mg' : ''}`;
+                        let doseText = dose && dose.dose ? dose.dose + ' mg' : '';
+                        let testText = dose && dose.blood_test == 1 ? '[Blood Test]' : '';
+                        week[i] = `${currentDay}\n${doseText}\n${testText}`.trim();
                         currentDay++;
                     }
                     body.push(week);
