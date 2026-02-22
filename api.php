@@ -23,8 +23,7 @@ $db->exec("
 
 // Safely upgrade the database with new columns
 try { $db->exec("ALTER TABLE users ADD COLUMN remember_token TEXT"); } catch (Exception $e) {}
-try { $db->exec("ALTER TABLE users ADD COLUMN reminder_time TEXT DEFAULT '09:00'"); } catch (Exception $e) {}
-try { $db->exec("ALTER TABLE users ADD COLUMN reminder_enabled INTEGER DEFAULT 0"); } catch (Exception $e) {}
+try { $db->exec("ALTER TABLE dosages ADD COLUMN blood_test INTEGER DEFAULT 0"); } catch (Exception $e) {}
 
 // Seed default admin if empty
 $stmt = $db->query("SELECT COUNT(*) FROM users");
@@ -119,7 +118,7 @@ if (!empty($saved_share)) {
 }
 
 if ($action === 'get_data') {
-    $stmt = $db->prepare("SELECT name, dob, target_min, target_max, share_code, saved_share_code, reminder_time, reminder_enabled FROM users WHERE id = ?");
+    $stmt = $db->prepare("SELECT name, dob, target_min, target_max, share_code, saved_share_code FROM users WHERE id = ?");
     $stmt->execute([$target_user_id]);
     $settings = $stmt->fetch(PDO::FETCH_ASSOC);
     
@@ -131,7 +130,8 @@ if ($action === 'get_data') {
     $stmt->execute([$target_user_id]);
     $inr = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $stmt = $db->prepare("SELECT date, dose FROM dosages WHERE user_id = ? ORDER BY date DESC");
+    // Pull blood_test data along with dosages
+    $stmt = $db->prepare("SELECT date, dose, blood_test FROM dosages WHERE user_id = ? ORDER BY date DESC");
     $stmt->execute([$target_user_id]);
     $dosages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -159,8 +159,9 @@ if ($action === 'save_dose' && !$view_only) {
     $data = json_decode(file_get_contents('php://input'), true);
     $stmt = $db->prepare("DELETE FROM dosages WHERE user_id = ? AND date = ?");
     $stmt->execute([$user_id, $data['date']]);
-    $stmt = $db->prepare("INSERT INTO dosages (user_id, date, dose) VALUES (?, ?, ?)");
-    $stmt->execute([$user_id, $data['date'], $data['dose']]);
+    // Save both dose and blood_test flag
+    $stmt = $db->prepare("INSERT INTO dosages (user_id, date, dose, blood_test) VALUES (?, ?, ?, ?)");
+    $stmt->execute([$user_id, $data['date'], $data['dose'], $data['blood_test'] ?? 0]);
     echo json_encode(['success' => true]); exit;
 }
 
@@ -171,10 +172,11 @@ if ($action === 'delete_dose' && !$view_only) {
     echo json_encode(['success' => true]); exit;
 }
 
+// Reminders removed from settings save
 if ($action === 'save_settings' && !$view_only) {
     $data = json_decode(file_get_contents('php://input'), true);
-    $stmt = $db->prepare("UPDATE users SET name=?, dob=?, target_min=?, target_max=?, reminder_time=?, reminder_enabled=? WHERE id=?");
-    $stmt->execute([$data['name'], $data['dob'], $data['target_min'], $data['target_max'], $data['reminder_time'], $data['reminder_enabled'], $user_id]);
+    $stmt = $db->prepare("UPDATE users SET name=?, dob=?, target_min=?, target_max=? WHERE id=?");
+    $stmt->execute([$data['name'], $data['dob'], $data['target_min'], $data['target_max'], $user_id]);
     echo json_encode(['success' => true]); exit;
 }
 
@@ -190,25 +192,20 @@ if ($action === 'admin_users' && $is_admin) {
     echo json_encode(['success' => true, 'users' => $stmt->fetchAll(PDO::FETCH_ASSOC)]); exit;
 }
 
-// UPDATED: Now safely handles empty passwords during user updates
 if ($action === 'admin_save_user' && $is_admin) {
     $data = json_decode(file_get_contents('php://input'), true);
     
     if (empty($data['id'])) {
-        // Creating a new user
         $hash = password_hash($data['password'], PASSWORD_DEFAULT);
         $share = substr(md5(uniqid()), 0, 10);
         $stmt = $db->prepare("INSERT INTO users (username, password, role, share_code) VALUES (?, ?, ?, ?)");
         $stmt->execute([$data['username'], $hash, $data['role'], $share]);
     } else {
-        // Updating an existing user
         if (!empty($data['password'])) {
-            // Update everything including the new password
             $hash = password_hash($data['password'], PASSWORD_DEFAULT);
             $stmt = $db->prepare("UPDATE users SET username=?, password=?, role=? WHERE id=?");
             $stmt->execute([$data['username'], $hash, $data['role'], $data['id']]);
         } else {
-            // Keep the old password, just update username and role
             $stmt = $db->prepare("UPDATE users SET username=?, role=? WHERE id=?");
             $stmt->execute([$data['username'], $data['role'], $data['id']]);
         }
@@ -228,7 +225,7 @@ if ($action === 'admin_delete_user' && $is_admin) {
 
 if ($action === 'backup' && !$view_only) {
     $stmt = $db->prepare("SELECT date, result FROM inr_results WHERE user_id = ?"); $stmt->execute([$user_id]); $inr = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $stmt = $db->prepare("SELECT date, dose FROM dosages WHERE user_id = ?"); $stmt->execute([$user_id]); $dose = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $db->prepare("SELECT date, dose, blood_test FROM dosages WHERE user_id = ?"); $stmt->execute([$user_id]); $dose = $stmt->fetchAll(PDO::FETCH_ASSOC);
     echo json_encode(['success' => true, 'backup' => ['inr' => $inr, 'dosages' => $dose]]); exit;
 }
 
@@ -238,8 +235,8 @@ if ($action === 'restore' && !$view_only) {
     $db->prepare("DELETE FROM dosages WHERE user_id=?")->execute([$user_id]);
     $stmt_inr = $db->prepare("INSERT INTO inr_results (user_id, date, result) VALUES (?, ?, ?)");
     foreach ($data['inr'] as $row) $stmt_inr->execute([$user_id, $row['date'], $row['result']]);
-    $stmt_dose = $db->prepare("INSERT INTO dosages (user_id, date, dose) VALUES (?, ?, ?)");
-    foreach ($data['dosages'] as $row) $stmt_dose->execute([$user_id, $row['date'], $row['dose']]);
+    $stmt_dose = $db->prepare("INSERT INTO dosages (user_id, date, dose, blood_test) VALUES (?, ?, ?, ?)");
+    foreach ($data['dosages'] as $row) $stmt_dose->execute([$user_id, $row['date'], $row['dose'], $row['blood_test'] ?? 0]);
     echo json_encode(['success' => true]); exit;
 }
 ?>
