@@ -52,13 +52,6 @@ Upload all files to your PHP-enabled web server (e.g., `public_html/inr/`).
 
 ---
 
-## ⚠️ Medical Disclaimer & Safety
-
-> **IMPORTANT:** This application is a data-logging tool and **must NOT** be used as a primary medical device.
-> The "Daily Reminder" feature relies on browser-internal timers which can be silenced by OS-level battery saving. **Users must rely on a dedicated, fail-safe alarm or physical pill-organizer for medication adherence. Always consult with your healthcare provider before adjusting your dosage.**
-
----
-
 ## 📱 PWA Features
 
 To get the full "App" experience:
